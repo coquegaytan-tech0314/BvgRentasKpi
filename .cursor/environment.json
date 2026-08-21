@@ -1,0 +1,14 @@
+{
+  "name": "BVG Rentas KPI Dashboard",
+  "install": "test -f BVG-Dashboard.html && test -f styles.css && python3 --version",
+  "terminals": [
+    {
+      "name": "static-server",
+      "command": "python3 -m http.server 8000 --bind 0.0.0.0",
+      "description": "Serves the static BVG dashboard (open http://localhost:8000/BVG-Dashboard.html) over HTTP on port 8000."
+    }
+  ],
+  "ports": [
+    { "name": "dashboard", "port": 8000 }
+  ]
+}
