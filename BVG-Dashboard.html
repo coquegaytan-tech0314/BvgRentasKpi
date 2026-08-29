@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#F7F7F5">
+<meta name="theme-color" content="#FFF8F4">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFMT1JBIiwKICAic2hvcnRfbmFtZSI6ICJBTE9SQSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRjdGN0Y1IiwKICAidGhlbWVfY29sb3IiOiAiI0Y3RjdGNSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDQ4IDQ4Jz48cmVjdCB3aWR0aD0nNDgnIGhlaWdodD0nNDgnIHJ4PScxNicgZmlsbD0nI0ZGMzg1QycvPjx0ZXh0IHg9JzI0JyB5PSczMicgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1zaXplPScyMicgZm9udC13ZWlnaHQ9JzgwMCcgZmlsbD0nI2ZmZicgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPkE8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjQ4eDQ4IiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
 <title>ALORA — BVG Residencial</title>
@@ -3310,7 +3310,7 @@ function renderDashboard() {
   const pendingRev = totalRevenue - collected;
 
   document.getElementById('kpiGrid').innerHTML =
-    '<div class="kpi-card" data-tooltip="Suma de reservas completadas en 2026" onclick="showSection(\'tracking\')">' +
+    '<div class="kpi-card kpi-income" data-tooltip="Suma de reservas completadas en 2026" onclick="showSection(\'tracking\')">' +
       '<div class="kpi-label">Ventas 2026</div>' +
       '<div class="kpi-value" style="color:var(--green)">' + fmtMoney(ventas2026) + '</div>' +
     '</div>' +
@@ -3322,7 +3322,7 @@ function renderDashboard() {
       '<div class="kpi-label">Tarifa Promedio/Noche</div>' +
       '<div class="kpi-value" style="color:var(--teal)">' + fmtMoney(avgRate) + '</div>' +
     '</div>' +
-    '<div class="kpi-card" data-tooltip="Ocupación '+yr+'" onclick="showSection(\'reportes\')">' +
+    '<div class="kpi-card kpi-occupancy" data-tooltip="Ocupación '+yr+'" onclick="showSection(\'reportes\')">' +
       '<div class="kpi-label">Tasa de Ocupación '+yr+'</div>' +
       '<div class="kpi-value" style="color:var(--teal)">' + occupancy + '%</div>' +
     '</div>' +
@@ -3330,7 +3330,7 @@ function renderDashboard() {
       '<div class="kpi-label">Ingresos Netos 2026</div>' +
       '<div class="kpi-value" style="color:' + (netos >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtMoney(netos) + '</div>' +
     '</div>' +
-    '<div class="kpi-card" data-tooltip="Total gastos" onclick="showSection(\'gastos\')">' +
+    '<div class="kpi-card kpi-expense" data-tooltip="Total gastos" onclick="showSection(\'gastos\')">' +
       '<div class="kpi-label">Gastos Totales</div>' +
       '<div class="kpi-value" style="color:var(--orange)">' + fmtMoney(gastosTotal) + '</div>' +
     '</div>' +
@@ -3342,7 +3342,7 @@ function renderDashboard() {
       '<div class="kpi-label">Próximas Llegadas (7d)</div>' +
       '<div class="kpi-value" style="color:var(--blue)">' + proxLlegadas + '</div>' +
     '</div>' +
-    '<div class="kpi-card" data-tooltip="Ingreso por departamento">' +
+    '<div class="kpi-card kpi-teal" data-tooltip="Ingreso por departamento">' +
       '<div class="kpi-label">1404 Norte / 1401 Sur</div>' +
       '<div class="kpi-value" style="font-size:1rem">' + fmtMoney(norteRev) + ' / ' + fmtMoney(surRev) + '</div>' +
     '</div>' +
@@ -3385,7 +3385,7 @@ function renderDashCharts(bookings, expenses) {
       labels: Object.keys(srcCount),
       datasets: [{ data: Object.values(srcCount), backgroundColor: ['#FF385C','#E8D5C4','#82C7E8','#22c55e','#eab308','#00A699'], borderWidth: 0 }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#6B7280', font: { size: 11 } } } } }
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#374151', font: { size: 11 } } } } }
   });
 
   // Bar chart: Monthly sales 2026 vs 2025
@@ -3411,10 +3411,10 @@ function renderDashCharts(bookings, expenses) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280', font: { size: 11 } } } },
+      plugins: { legend: { labels: { color: '#374151', font: { size: 11 } } } },
       scales: {
-        x: { ticks: { color: '#6B7280' }, grid: { display: false } },
-        y: { ticks: { color: '#6B7280', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { ticks: { color: '#374151' }, grid: { display: false } },
+        y: { ticks: { color: '#374151', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -3443,10 +3443,10 @@ function renderDashCharts(bookings, expenses) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280', font: { size: 11 } } } },
+      plugins: { legend: { labels: { color: '#374151', font: { size: 11 } } } },
       scales: {
-        x: { stacked: true, ticks: { color: '#6B7280', maxRotation: 45 }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: '#6B7280', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { stacked: true, ticks: { color: '#374151', maxRotation: 45 }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: '#374151', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -3471,10 +3471,10 @@ function renderDashCharts(bookings, expenses) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280', font: { size: 11 } } } },
+      plugins: { legend: { labels: { color: '#374151', font: { size: 11 } } } },
       scales: {
-        x: { stacked: true, ticks: { color: '#6B7280' }, grid: { display: false } },
-        y: { stacked: true, ticks: { color: '#6B7280', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { stacked: true, ticks: { color: '#374151' }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: '#374151', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -3740,7 +3740,7 @@ function renderCRM() {
       maintainAspectRatio: true,
       indexAxis: 'y',
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { return fmtMoney(ctx.raw); } } } },
-      scales: { x: { ticks: { callback: function(v) { return fmtMoney(v); }, color: '#6B7280' }, grid: { color: 'rgba(0,0,0,.06)' } }, y: { ticks: { color: '#222222', font: { size: 11 } }, grid: { display: false } } } }
+      scales: { x: { ticks: { callback: function(v) { return fmtMoney(v); }, color: '#374151' }, grid: { color: 'rgba(0,0,0,.06)' } }, y: { ticks: { color: '#222222', font: { size: 11 } }, grid: { display: false } } } }
     }
   });
 
@@ -3761,7 +3761,7 @@ function renderCRM() {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      plugins: { legend: { position: 'bottom', labels: { color: '#6B7280', padding: 12 } } }
+      plugins: { legend: { position: 'bottom', labels: { color: '#374151', padding: 12 } } }
     }
   });
 }
@@ -4296,10 +4296,10 @@ function renderExpenseCharts(expenses) {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280', font: { size: 11 } } } },
+      plugins: { legend: { labels: { color: '#374151', font: { size: 11 } } } },
       scales: {
-        x: { ticks: { color: '#6B7280' }, grid: { display: false } },
-        y: { ticks: { color: '#6B7280', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { ticks: { color: '#374151' }, grid: { display: false } },
+        y: { ticks: { color: '#374151', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -4314,7 +4314,7 @@ function renderExpenseCharts(expenses) {
       labels: Object.keys(byType),
       datasets: [{ data: Object.values(byType), backgroundColor: typeColors, borderWidth: 0 }]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#6B7280', font: { size: 10 } } } } }
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#374151', font: { size: 10 } } } } }
   });
 }
 
@@ -4837,10 +4837,10 @@ function renderReports() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280' } } },
+      plugins: { legend: { labels: { color: '#374151' } } },
       scales: {
-        x: { ticks: { color: '#6B7280' }, grid: { display: false } },
-        y: { ticks: { color: '#6B7280', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { ticks: { color: '#374151' }, grid: { display: false } },
+        y: { ticks: { color: '#374151', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -4864,10 +4864,10 @@ function renderReports() {
     options: {
       responsive: true,
       indexAxis: 'y',
-      plugins: { legend: { labels: { color: '#6B7280' } } },
+      plugins: { legend: { labels: { color: '#374151' } } },
       scales: {
-        x: { stacked: true, ticks: { color: '#6B7280' }, grid: { color: 'rgba(0,0,0,.06)' } },
-        y: { stacked: true, ticks: { color: '#6B7280' }, grid: { display: false } }
+        x: { stacked: true, ticks: { color: '#374151' }, grid: { color: 'rgba(0,0,0,.06)' } },
+        y: { stacked: true, ticks: { color: '#374151' }, grid: { display: false } }
       }
     }
   });
@@ -4895,10 +4895,10 @@ function renderReports() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280' } } },
+      plugins: { legend: { labels: { color: '#374151' } } },
       scales: {
-        x: { ticks: { color: '#6B7280' }, grid: { display: false } },
-        y: { ticks: { color: '#6B7280', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { ticks: { color: '#374151' }, grid: { display: false } },
+        y: { ticks: { color: '#374151', callback: v => '$' + (v/1000) + 'k' }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -4932,10 +4932,10 @@ function renderReports() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6B7280' } } },
+      plugins: { legend: { labels: { color: '#374151' } } },
       scales: {
-        x: { ticks: { color: '#6B7280' }, grid: { display: false } },
-        y: { ticks: { color: '#6B7280', callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(0,0,0,.06)' } }
+        x: { ticks: { color: '#374151' }, grid: { display: false } },
+        y: { ticks: { color: '#374151', callback: v => '$' + v.toLocaleString() }, grid: { color: 'rgba(0,0,0,.06)' } }
       }
     }
   });
@@ -5793,7 +5793,7 @@ function initNotifications() {
    CHART.JS GLOBAL CONFIG
    ============================================================ */
 if (typeof Chart !== 'undefined') {
-  Chart.defaults.color = '#6B7280';
+  Chart.defaults.color = '#374151';
   Chart.defaults.borderColor = '#EBEBEB';
   Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   Chart.defaults.font.size = 11;
