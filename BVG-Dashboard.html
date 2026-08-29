@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#FFF8F4">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFMT1JBIiwKICAic2hvcnRfbmFtZSI6ICJBTE9SQSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRjdGN0Y1IiwKICAidGhlbWVfY29sb3IiOiAiI0Y3RjdGNSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDQ4IDQ4Jz48cmVjdCB3aWR0aD0nNDgnIGhlaWdodD0nNDgnIHJ4PScxNicgZmlsbD0nI0ZGMzg1QycvPjx0ZXh0IHg9JzI0JyB5PSczMicgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1zaXplPScyMicgZm9udC13ZWlnaHQ9JzgwMCcgZmlsbD0nI2ZmZicgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPkE8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjQ4eDQ4IiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
-<title>ALORA — BVG Residencial</title>
+<title>ALORA — BVG Residencial · Ixtapa</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Firebase SDK (compat for no-build-tool usage) -->
@@ -71,12 +71,12 @@
      ============================================================ -->
 <div id="loginScreen">
   <div class="login-box">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="margin-bottom:.75rem">
+    <svg class="alora-mark" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
       <rect width="48" height="48" rx="16" fill="#FF385C"/>
       <text x="24" y="32" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="sans-serif">A</text>
     </svg>
-    <h1>ALORA</h1>
-    <p>BVG Residencial · Ixtapa</p>
+    <h1 class="alora-wordmark">ALORA</h1>
+    <p class="alora-sub">BVG Residencial · Ixtapa Zihuatanejo</p>
     <div class="error" id="loginError">Contraseña incorrecta</div>
     <input type="password" id="loginPassword" placeholder="Contraseña" autofocus>
     <button onclick="attemptLogin()">Ingresar</button>
@@ -87,10 +87,12 @@
      APP (hidden until auth)
      ============================================================ -->
 <div id="app">
-  <!-- Hamburger (mobile) -->
-  <button class="hamburger" onclick="toggleSidebar()">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z"/></svg>
-  </button>
+  <header class="mobile-topbar" aria-label="ALORA">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z"/></svg>
+    </button>
+    <div class="alora-wordmark">ALORA</div>
+  </header>
   <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
   <div class="layout">
@@ -101,7 +103,7 @@
           <rect width="36" height="36" rx="10" fill="#FF385C"/>
           <text x="18" y="24" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" font-family="sans-serif">A</text>
         </svg>
-        <span>ALORA<small>BVG Residencial · Ixtapa</small></span>
+        <span class="alora-wordmark">ALORA<small>BVG Residencial · Ixtapa Zihuatanejo</small></span>
       </div>
       <nav>
         <a href="#" data-section="dashboard" class="active" onclick="showSection('dashboard')">
@@ -535,16 +537,16 @@
           <div id="asWhoBar" class="as-who" style="display:none">
             <span id="asWhoName">—</span>
             <span class="as-who-role" id="asWhoRole">—</span>
-            <button type="button" class="btn btn-outline btn-sm" id="asChangePinBtn" onclick="asLogoutPin()">Cambiar PIN</button>
+            <button type="button" class="btn btn-outline btn-sm" id="asChangePinBtn" onclick="asLogoutPin()">Cerrar sesión</button>
           </div>
         </div>
 
         <div id="asPinGate" class="settings-card as-pin-card">
           <h3>¿Quién eres?</h3>
-          <p class="as-muted">PIN de 4 dígitos para el checador. No reemplaza la contraseña del dashboard.</p>
+          <p class="as-muted">PIN de 4 dígitos. 2604 es Valerie · 0314 es Koke (admin). No hay usuario ni «SOY NUEVO».</p>
           <input type="tel" id="asPinInput" class="as-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="····" autocomplete="one-time-code" aria-label="PIN de asistencia">
           <button type="button" class="btn btn-primary as-pin-btn" onclick="asTryPin()">Entrar al checador</button>
-          <p class="as-muted as-center">Valeria (trabajadora) o Koke (admin). Los PINs se pueden cambiar en Configuración.</p>
+          <p class="as-muted as-center">La sesión del PIN se queda en este teléfono hasta que toques Cerrar sesión. Los PINs se pueden cambiar en Configuración.</p>
         </div>
 
         <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
@@ -563,7 +565,12 @@
 
             <div class="settings-card">
               <h3>Mi quincena</h3>
-              <p class="as-muted" id="asQLabel">—</p>
+              <div class="as-cal-nav">
+                <button type="button" class="btn btn-outline btn-sm" onclick="asQNav(-1)" aria-label="Quincena anterior">‹</button>
+                <b id="asQLabel">—</b>
+                <button type="button" class="btn btn-outline btn-sm" onclick="asQNav(1)" aria-label="Quincena siguiente">›</button>
+              </div>
+              <p class="as-muted" id="asQSub">Puntualidad en % · sin pesos</p>
               <div class="as-shift-kpis">
                 <div class="as-kpi"><b id="asQDays">0</b><small>días trabajados</small></div>
                 <div class="as-kpi"><b id="asQHours">0h</b><small>horas totales</small></div>
@@ -617,7 +624,7 @@
             <h3>Turno</h3>
             <p class="as-muted">Toca para empezar tu turno. Hora local del dispositivo · Sin GPS.</p>
             <button type="button" class="as-big-btn" onclick="asStartShift()">ENTRAR<br>AL TURNO</button>
-            <button type="button" class="btn btn-outline as-full-btn" style="margin-top:1rem;max-width:220px" onclick="asLogoutPin()">Cambiar PIN</button>
+            <button type="button" class="btn btn-outline as-full-btn" style="margin-top:1rem;max-width:220px" onclick="asLogoutPin()">Cerrar sesión</button>
           </div>
 
           <div id="asOnShift" style="display:none">
@@ -675,7 +682,7 @@
               </div>
               <p class="as-muted" style="margin-top:.75rem">Turno guardado con hora de entrada y salida (pausas descontadas). Tracking de Rentas sigue disponible en el menú.</p>
               <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asGoOffShift()">Volver al inicio</button>
-              <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cambiar PIN</button>
+              <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cerrar sesión</button>
             </div>
           </div>
         </div>
@@ -690,7 +697,7 @@
               <button type="button" class="as-tab" data-as-tab="calendario" onclick="asSwitchTab('calendario')">Calendario</button>
               <button type="button" class="as-tab" data-as-tab="tareas" onclick="asSwitchTab('tareas')">Tareas</button>
               <button type="button" class="as-tab" data-as-tab="extra" onclick="asSwitchTab('extra')">Tiempo extra</button>
-              <button type="button" class="as-tab" data-as-tab="nomina" onclick="asSwitchTab('nomina')">Nómina</button>
+              <button type="button" class="as-tab" data-as-tab="nomina" id="asTabNomina" onclick="asSwitchTab('nomina')">Nómina</button>
               <button type="button" class="as-tab" data-as-tab="peticiones" onclick="asSwitchTab('peticiones')">Peticiones</button>
               <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
               <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
@@ -754,10 +761,12 @@
 
         <div class="settings-card admin-only">
           <h3>Ajustes de Asistencia</h3>
-          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">Hora esperada para puntualidad (por defecto 9:00). Tarifa MXN/hora solo para el resumen de nómina; déjala vacía si no aplica.</p>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">Hora de entrada BVG (09:00, no la 08:00 escolar) y tolerancia. Sueldo/día y tarifa extra son opcionales y solo los ve el admin 0314.</p>
           <div class="form-grid">
-            <div class="form-group"><label>Entrada esperada</label><input type="time" id="cfgAsExpectedStart" value="09:00"></div>
-            <div class="form-group"><label>MXN / hora (opcional)</label><input type="number" id="cfgAsHourly" min="0" step="1" placeholder="vacío"></div>
+            <div class="form-group"><label>Hora de entrada</label><input type="time" id="cfgAsExpectedStart" value="09:00"></div>
+            <div class="form-group"><label>Tolerancia minutos</label><input type="number" id="cfgAsTolerance" min="0" max="120" step="1" value="10"></div>
+            <div class="form-group"><label>Sueldo / día (opcional)</label><input type="number" id="cfgAsSueldoDia" min="0" step="1" placeholder="vacío"></div>
+            <div class="form-group"><label>Tarifa extra MXN/h (opcional)</label><input type="number" id="cfgAsTarifaExtra" min="0" step="1" placeholder="vacío"></div>
           </div>
           <button class="btn btn-primary btn-sm" style="margin-top:.75rem" onclick="saveAsistenciaCfg()">Guardar ajustes</button>
         </div>
@@ -1035,6 +1044,22 @@
     <div class="modal-body" id="asShiftDetailBody"></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('asShiftDetailModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="asAdminCloseModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>Registrar salida</h3><button class="modal-close" onclick="closeModal('asAdminCloseModal')">×</button></div>
+    <div class="modal-body">
+      <p class="as-muted">Cierra un punch olvidado. La hora de entrada no se puede editar.</p>
+      <p style="font-size:.9rem;margin:.5rem 0"><b>Entrada:</b> <span id="asAdminCloseEntrada">—</span></p>
+      <input type="hidden" id="asAdminCloseId">
+      <div class="form-group"><label>Hora de salida</label><input type="datetime-local" id="asAdminCloseAt"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asAdminCloseModal')">Cancelar</button>
+      <button class="btn btn-danger" onclick="asConfirmAdminClose()">Registrar salida</button>
     </div>
   </div>
 </div>
@@ -1826,11 +1851,14 @@ var AS_DEPTO_RATES = { '1401 Sur': 6500, '1404 Norte': 5500, '1204 Norte': null 
 var AS_CLOCK_DEPTOS = ['1401 Sur', '1404 Norte', '1204 Norte'];
 var AS_DAY_CHIPS = ['Cliente', 'WhatsApp', 'Limpieza coord', 'Recados', 'Visita depto 1401', 'Visita depto 1404', 'Visita depto 1204', 'Otro'];
 var AS_ADMIN_TAB = 'resumen';
+var AS_SESSION_KEY = 'bvg_activa_session';
+var AS_SHIFT_KEY = 'bvg_activa_shift';
 var _asTimerInt = null;
 var _asJustEnded = null;
 var _asOtMinutes = 30;
 var _asDayPhotos = [];
 var _asCalMonth = null;
+var _asQAnchor = null;
 
 function defaultAsistenciaUsers() {
   return [
@@ -1860,22 +1888,46 @@ function saveAsistenciaPeticiones(list) { saveData(STORAGE_KEYS.asistenciaPetici
 function getAsistenciaOvertime() { return loadData(STORAGE_KEYS.asistenciaOvertime) || []; }
 function saveAsistenciaOvertime(list) { saveData(STORAGE_KEYS.asistenciaOvertime, list); }
 function getAsistenciaCfg() {
-  return loadData(STORAGE_KEYS.asistenciaCfg) || { expectedStart: '09:00', hourlyMxn: '' };
+  var c = loadData(STORAGE_KEYS.asistenciaCfg) || {};
+  var tol = c.toleranceMin;
+  if (tol === '' || tol == null || isNaN(Number(tol))) tol = 10;
+  return {
+    expectedStart: c.expectedStart || '09:00',
+    toleranceMin: Number(tol),
+    sueldoDia: c.sueldoDia === '' || c.sueldoDia == null ? '' : Number(c.sueldoDia),
+    tarifaExtra: c.tarifaExtra === '' || c.tarifaExtra == null ? '' : Number(c.tarifaExtra),
+    paidQuincenas: c.paidQuincenas && typeof c.paidQuincenas === 'object' ? c.paidQuincenas : {}
+  };
 }
 function saveAsistenciaCfg() {
   if (adminGuard()) return;
+  var prev = getAsistenciaCfg();
   var start = (document.getElementById('cfgAsExpectedStart').value || '09:00');
-  var rate = document.getElementById('cfgAsHourly').value;
-  saveData(STORAGE_KEYS.asistenciaCfg, { expectedStart: start, hourlyMxn: rate === '' ? '' : Number(rate) });
+  var tolRaw = document.getElementById('cfgAsTolerance').value;
+  var tol = tolRaw === '' ? 10 : Number(tolRaw);
+  if (isNaN(tol) || tol < 0) tol = 10;
+  var sueldo = document.getElementById('cfgAsSueldoDia').value;
+  var extra = document.getElementById('cfgAsTarifaExtra').value;
+  saveData(STORAGE_KEYS.asistenciaCfg, {
+    expectedStart: start,
+    toleranceMin: tol,
+    sueldoDia: sueldo === '' ? '' : Number(sueldo),
+    tarifaExtra: extra === '' ? '' : Number(extra),
+    paidQuincenas: prev.paidQuincenas || {}
+  });
   showToast('Ajustes de asistencia guardados', 'success');
 }
 function renderAsistenciaCfg() {
   var boxS = document.getElementById('cfgAsExpectedStart');
-  var boxR = document.getElementById('cfgAsHourly');
   if (!boxS) return;
   var cfg = getAsistenciaCfg();
   boxS.value = cfg.expectedStart || '09:00';
-  boxR.value = cfg.hourlyMxn === '' || cfg.hourlyMxn == null ? '' : cfg.hourlyMxn;
+  var boxT = document.getElementById('cfgAsTolerance');
+  if (boxT) boxT.value = cfg.toleranceMin;
+  var boxD = document.getElementById('cfgAsSueldoDia');
+  if (boxD) boxD.value = cfg.sueldoDia === '' || cfg.sueldoDia == null ? '' : cfg.sueldoDia;
+  var boxE = document.getElementById('cfgAsTarifaExtra');
+  if (boxE) boxE.value = cfg.tarifaExtra === '' || cfg.tarifaExtra == null ? '' : cfg.tarifaExtra;
 }
 
 function asUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -1914,15 +1966,48 @@ function asIsPhone() {
   return mobileUA || (touch && smallScreen);
 }
 function asCurrentUser() {
-  try { return JSON.parse(sessionStorage.getItem('bvg_asistencia_session')) || null; } catch (e) { return null; }
+  try {
+    var u = JSON.parse(localStorage.getItem(AS_SESSION_KEY));
+    if (u) return u;
+    u = JSON.parse(sessionStorage.getItem('bvg_asistencia_session'));
+    if (u) {
+      localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
+      sessionStorage.removeItem('bvg_asistencia_session');
+      return u;
+    }
+  } catch (e) {}
+  return null;
 }
 function asSetSession(u) {
-  if (u) sessionStorage.setItem('bvg_asistencia_session', JSON.stringify(u));
-  else sessionStorage.removeItem('bvg_asistencia_session');
+  if (u) localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
+  else localStorage.removeItem(AS_SESSION_KEY);
+  try { sessionStorage.removeItem('bvg_asistencia_session'); } catch (e) {}
 }
 function asIsAdminView() {
   var u = asCurrentUser();
   return (u && u.role === 'admin') || isAdmin();
+}
+function asCanSeePayroll() {
+  var u = asCurrentUser();
+  return !!(u && u.role === 'admin');
+}
+function asReadActiveFallback() {
+  try { return JSON.parse(localStorage.getItem(AS_SHIFT_KEY)); } catch (e) { return null; }
+}
+function asWriteActiveFallback(s) {
+  if (s && !s.endedAt) localStorage.setItem(AS_SHIFT_KEY, JSON.stringify(s));
+  else localStorage.removeItem(AS_SHIFT_KEY);
+}
+function asHydrateActiveFallback() {
+  var snap = asReadActiveFallback();
+  if (!snap || !snap.id || snap.endedAt) {
+    if (snap && snap.endedAt) asWriteActiveFallback(null);
+    return;
+  }
+  var list = getAsistenciaShifts() || [];
+  var found = list.find(function(x) { return x && x.id === snap.id; });
+  if (found && found.endedAt) { asWriteActiveFallback(null); return; }
+  if (!found) saveAsistenciaShifts(asUpsertById(list, snap));
 }
 function asShiftEvents(s) {
   if (!s || !s.events) return [];
@@ -1993,13 +2078,67 @@ function asExpectedMinutes() {
   var t = (getAsistenciaCfg().expectedStart || '09:00').split(':');
   return (Number(t[0]) || 9) * 60 + (Number(t[1]) || 0);
 }
+function asToleranceMinutes() {
+  var n = Number(getAsistenciaCfg().toleranceMin);
+  return isNaN(n) ? 10 : Math.max(0, n);
+}
 function asIsLate(s) {
   if (!s || !s.startedAt) return false;
   var d = new Date(s.startedAt);
-  return (d.getHours() * 60 + d.getMinutes()) > asExpectedMinutes();
+  return (d.getHours() * 60 + d.getMinutes()) > (asExpectedMinutes() + asToleranceMinutes());
+}
+function asPunctPct(rows) {
+  if (!rows || !rows.length) return null;
+  var onTime = 0;
+  rows.forEach(function(s) { if (!asIsLate(s)) onTime++; });
+  return Math.round((onTime / rows.length) * 100);
+}
+function asOtStatusLabel(st) {
+  if (st === 'approved') return 'aprobada';
+  if (st === 'rejected') return 'no aprobada';
+  return 'esperando';
+}
+function asQKey(pin, q) {
+  return String(pin) + ':' + asLocalDateStr(q.from.getTime());
+}
+function asQAnchorDate() {
+  return _asQAnchor ? new Date(_asQAnchor) : new Date();
+}
+function asQNav(delta) {
+  var q = asQuincenaRange(asQAnchorDate());
+  var next = delta > 0 ? new Date(q.to.getTime() + 36e5) : new Date(q.from.getTime() - 36e5);
+  _asQAnchor = next.getTime();
+  var u = asCurrentUser();
+  if (u) asRenderQuincena(u.pin);
+  if (asIsAdminView() && AS_ADMIN_TAB === 'nomina') asRenderAdmin();
+}
+function asToDatetimeLocal(ts) {
+  var d = new Date(ts || Date.now());
+  return d.getFullYear() + '-' + asPad(d.getMonth() + 1) + '-' + asPad(d.getDate()) + 'T' + asPad(d.getHours()) + ':' + asPad(d.getMinutes());
+}
+function asFromDatetimeLocal(v) {
+  if (!v) return null;
+  var t = new Date(v).getTime();
+  return isNaN(t) ? null : t;
+}
+function asPresence(s) {
+  if (!s || s.endedAt) return { key: 'out', label: 'SIN TURNO', badge: 'badge-blue' };
+  if (asIsPaused(s)) return { key: 'pause', label: 'PAUSA', badge: 'badge-orange' };
+  if (asLocalDateStr(s.startedAt) < asLocalDateStr(Date.now())) return { key: 'nosalida', label: 'SIN SALIDA', badge: 'badge-red' };
+  return { key: 'in', label: 'EN TURNO', badge: 'badge-green' };
+}
+function asOpenShiftForPin(pin) {
+  var open = asShiftsForPin(pin).filter(function(s) { return s && !s.endedAt; });
+  open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
+  return open[0] || null;
 }
 function asPersistShift(s) {
   saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  if (s && !s.endedAt) asWriteActiveFallback(s);
+  else {
+    var snap = asReadActiveFallback();
+    if (snap && s && snap.id === s.id) asWriteActiveFallback(null);
+  }
 }
 
 function asTryPin() {
@@ -2039,11 +2178,17 @@ function asLogoutPin() {
 }
 
 function asActiveShift() {
+  asHydrateActiveFallback();
   var u = asCurrentUser();
   if (!u) return null;
   var open = getAsistenciaShifts().filter(function(s) { return s && !s.endedAt && String(s.userPin) === String(u.pin); });
-  if (!open.length) return null;
+  if (!open.length) {
+    var snap = asReadActiveFallback();
+    if (snap && !snap.endedAt && String(snap.userPin) === String(u.pin)) return snap;
+    return null;
+  }
   open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
+  asWriteActiveFallback(open[0]);
   return open[0];
 }
 
@@ -2059,7 +2204,7 @@ function asStartShift() {
     id: asUid(), userPin: u.pin, userName: u.name, userShort: u.short,
     startedAt: Date.now(), endedAt: null, events: [], pauses: [], note: '', dayReport: null
   };
-  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  asPersistShift(s);
   renderAsistencia();
   showToast('Turno iniciado', 'success');
 }
@@ -2355,7 +2500,39 @@ function asDeleteShiftEvent(id) {
   showToast('Registro borrado', 'info');
 }
 
+function asOpenAdminClose(id) {
+  if (!asIsAdminView()) return;
+  var s = getAsistenciaShifts().find(function(x) { return x && x.id === id; });
+  if (!s || s.endedAt) { showToast('Ese turno ya está cerrado', 'info'); return; }
+  document.getElementById('asAdminCloseId').value = s.id;
+  document.getElementById('asAdminCloseEntrada').textContent = asFmtDateTime(s.startedAt);
+  var at = document.getElementById('asAdminCloseAt');
+  if (at) at.value = asToDatetimeLocal(Date.now());
+  try { closeModal('asShiftDetailModal'); } catch (e) {}
+  openModal('asAdminCloseModal');
+}
+function asConfirmAdminClose() {
+  if (!asIsAdminView()) return;
+  var id = document.getElementById('asAdminCloseId').value;
+  var s = getAsistenciaShifts().find(function(x) { return x && x.id === id; });
+  if (!s) { closeModal('asAdminCloseModal'); return; }
+  if (s.endedAt) { closeModal('asAdminCloseModal'); showToast('Ese turno ya está cerrado', 'info'); return; }
+  var endedAt = asFromDatetimeLocal(document.getElementById('asAdminCloseAt').value);
+  if (!endedAt) { showToast('Elige hora de salida', 'error'); return; }
+  if (endedAt <= s.startedAt) { showToast('La salida debe ser después de la entrada', 'error'); return; }
+  if (endedAt > Date.now() + 5 * 60000) { showToast('La salida no puede ser en el futuro', 'error'); return; }
+  asCloseOpenPause(s, endedAt);
+  s.endedAt = endedAt;
+  s.closedByAdmin = true;
+  s.durationMs = asWorkedMs(s, endedAt);
+  asPersistShift(s);
+  closeModal('asAdminCloseModal');
+  renderAsistencia();
+  showToast('Salida registrada', 'success');
+}
+
 function asSwitchTab(t) {
+  if (t === 'nomina' && !asCanSeePayroll()) { showToast('Nómina solo para Koke (0314)', 'error'); return; }
   AS_ADMIN_TAB = t;
   document.querySelectorAll('#asAdminTabs .as-tab').forEach(function(el) {
     el.classList.toggle('active', el.getAttribute('data-as-tab') === t);
@@ -2450,6 +2627,7 @@ function asRenderAdmin() {
         (pauseN ? '<small>Pausas: ' + pauseN + ' · ' + asFmtDur(asPauseMs(s, s.endedAt || Date.now())) + '</small>' : '') +
         (s.note ? '<small><b>Nota:</b> ' + esc(s.note) + '</small>' : '') +
         (asHasDayReport(s) ? '<small><b>Hoy:</b> ' + esc((s.dayReport.chips || []).join(', ')) + '</small>' : '') +
+        (open ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button>' : '') +
         '</div>';
     }).join('');
   } else if (AS_ADMIN_TAB === 'accesos') {
@@ -2565,6 +2743,9 @@ function renderAsistencia() {
   }
   if (u) asRenderWorkerHome();
   admin.style.display = asIsAdminView() ? '' : 'none';
+  var nomTab = document.getElementById('asTabNomina');
+  if (nomTab) nomTab.style.display = asCanSeePayroll() ? '' : 'none';
+  if (!asCanSeePayroll() && AS_ADMIN_TAB === 'nomina') AS_ADMIN_TAB = 'resumen';
   if (asIsAdminView()) asRenderAdmin();
   var pinInput = document.getElementById('asPinInput');
   if (pinInput && !u) {
@@ -2688,21 +2869,24 @@ function asRenderWorkerHome() {
   asUpdateWorkerBadges();
 }
 function asRenderQuincena(pin) {
-  var q = asQuincenaRange(new Date());
+  var q = asQuincenaRange(asQAnchorDate());
   var rows = asShiftsInRange(pin, q.from, q.to);
   var days = {};
-  var ms = 0, onTime = 0, late = 0;
+  var ms = 0;
   rows.forEach(function(s) {
     days[asLocalDateStr(s.startedAt)] = true;
     ms += asWorkedMs(s);
-    if (asIsLate(s)) late++; else onTime++;
   });
+  var cfg = getAsistenciaCfg();
   var lab = document.getElementById('asQLabel');
-  if (lab) lab.textContent = q.label + ' · entrada esperada ' + (getAsistenciaCfg().expectedStart || '09:00');
+  if (lab) lab.textContent = q.label;
+  var sub = document.getElementById('asQSub');
+  if (sub) sub.textContent = 'Entrada ' + (cfg.expectedStart || '09:00') + ' · tolerancia ' + asToleranceMinutes() + ' min · solo %';
   var dEl = document.getElementById('asQDays'); if (dEl) dEl.textContent = Object.keys(days).length;
   var hEl = document.getElementById('asQHours'); if (hEl) hEl.textContent = asHoursLabel(ms);
   var pEl = document.getElementById('asQPunct');
-  if (pEl) pEl.textContent = rows.length ? (onTime + ' a tiempo / ' + late + ' tarde') : '—';
+  var pct = asPunctPct(rows);
+  if (pEl) pEl.textContent = pct == null ? '—' : (pct + '%');
 }
 function asDeptoMatch(depto) {
   var d = (depto || '').toLowerCase();
@@ -2865,6 +3049,7 @@ function asOpenShiftDetail(id, adminOk) {
     (s.note ? '<p class="as-muted" style="margin-top:.75rem"><b>Nota:</b> ' + esc(s.note) + '</p>' : '') +
     (asHasDayReport(s) ? '<p class="as-muted"><b>Hoy:</b> ' + esc((s.dayReport.chips || []).join(', ')) + (s.dayReport.text ? ' — ' + esc(s.dayReport.text) : '') + '</p>' : '') +
     (asHasDayReport(s) && s.dayReport.photos && s.dayReport.photos.length ? '<div class="as-thumbs">' + s.dayReport.photos.map(function(p) { return '<img src="' + p + '" class="as-thumb" alt="">'; }).join('') + '</div>' : '') +
+    (!s.endedAt && asIsAdminView() ? '<button type="button" class="btn btn-danger as-full-btn" style="margin-top:.75rem" onclick="asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button><p class="as-muted">La hora de entrada no se edita.</p>' : '') +
     '<h3 style="margin-top:1rem;font-size:.9rem">Actividad</h3>' + evHtml;
   openModal('asShiftDetailModal');
 }
@@ -2986,30 +3171,28 @@ function asRenderMyOt() {
     .sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
   if (!rows.length) { box.innerHTML = '<div class="as-empty">Sin reportes de tiempo extra.</div>'; return; }
   box.innerHTML = rows.map(function(o) {
-    return '<div class="as-item"><div class="as-item-top"><b>' + esc(o.date) + ' · ' + (o.minutes / 60).toFixed(1) + ' h</b><span class="badge ' + (o.status === 'approved' ? 'badge-green' : o.status === 'rejected' ? 'badge-red' : 'badge-orange') + '">' + esc(o.status) + '</span></div><small>' + esc(o.reason) + '</small></div>';
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(o.date) + ' · ' + (o.minutes / 60).toFixed(1) + ' h</b><span class="badge ' + (o.status === 'approved' ? 'badge-green' : o.status === 'rejected' ? 'badge-red' : 'badge-orange') + '">' + esc(asOtStatusLabel(o.status)) + '</span></div><small>' + esc(o.reason) + '</small></div>';
   }).join('');
 }
 
 function asValerieOpenShift() {
-  var pin = asWorkerUser().pin;
-  var open = asShiftsForPin(pin).filter(function(s) { return s && !s.endedAt; });
-  open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
-  return open[0] || null;
+  return asOpenShiftForPin(asWorkerUser().pin);
 }
 function asRenderAdminResumen(list) {
-  var w = asWorkerUser();
-  var s = asValerieOpenShift();
+  asHydrateActiveFallback();
   var today0 = new Date(); today0.setHours(0, 0, 0, 0);
   var today1 = new Date(); today1.setHours(23, 59, 59, 999);
-  var todayMs = asShiftsInRange(w.pin, today0, today1).reduce(function(a, x) { return a + asWorkedMs(x); }, 0);
-  var status = 'AFUERA';
-  var badge = 'badge-blue';
-  if (s && asIsPaused(s)) { status = 'PAUSA'; badge = 'badge-orange'; }
-  else if (s) { status = 'EN TURNO'; badge = 'badge-green'; }
-  list.innerHTML = '<div class="as-item"><div class="as-item-top"><b>' + esc(w.short || 'Valeria') + '</b><span class="badge ' + badge + '">' + status + '</span></div>' +
-    '<div class="as-grid2"><small><b>Entrada:</b> ' + (s ? asFmtDateTime(s.startedAt) : '—') + '</small>' +
-    '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small></div>' +
-    (s && s.note ? '<small><b>Nota:</b> ' + esc(s.note) + '</small>' : '') + '</div>';
+  var users = getAsistenciaUsers();
+  list.innerHTML = '<p class="as-muted">Quién está: EN TURNO · PAUSA · SIN SALIDA. Sin GPS.</p>' + users.map(function(w) {
+    var s = asOpenShiftForPin(w.pin);
+    var pr = asPresence(s);
+    var todayMs = asShiftsInRange(w.pin, today0, today1).reduce(function(a, x) { return a + asWorkedMs(x); }, 0);
+    var closeBtn = (s && !s.endedAt) ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button>' : '';
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(w.short || w.name || '—') + '</b><span class="badge ' + pr.badge + '">' + pr.label + '</span></div>' +
+      '<div class="as-grid2"><small><b>Entrada:</b> ' + (s ? asFmtDateTime(s.startedAt) : '—') + '</small>' +
+      '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small></div>' +
+      (s && s.note ? '<small><b>Nota:</b> ' + esc(s.note) + '</small>' : '') + closeBtn + '</div>';
+  }).join('');
 }
 function asRenderAdminCal(list) {
   var now = _asCalMonth ? new Date(_asCalMonth) : new Date();
@@ -3053,8 +3236,13 @@ function asRenderAdminExtra(list) {
   var rows = getAsistenciaOvertime().slice().sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
   if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin tiempo extra reportado.</div>'; return; }
   list.innerHTML = rows.map(function(o) {
-    var acts = o.status === 'pending' ? '<div class="as-item-actions"><button type="button" class="btn btn-success btn-sm" onclick="asSetOvertime(\'' + o.id + '\',\'approved\')">Aprobar</button><button type="button" class="btn btn-danger btn-sm" onclick="asSetOvertime(\'' + o.id + '\',\'rejected\')">Rechazar</button></div>' : '';
-    return '<div class="as-item"><div class="as-item-top"><b>' + esc(o.userShort || 'Valeria') + ' · ' + esc(o.date) + ' · ' + (o.minutes / 60).toFixed(1) + ' h</b><span class="badge ' + (o.status === 'approved' ? 'badge-green' : o.status === 'rejected' ? 'badge-red' : 'badge-orange') + '">' + esc(o.status) + '</span></div><small>' + esc(o.reason) + '</small>' + acts + '</div>';
+    var acts = o.status === 'pending' ? '<div class="as-item-actions"><button type="button" class="btn btn-success btn-sm" onclick="asSetOvertime(\'' + o.id + '\',\'approved\')">Aprobar</button><button type="button" class="btn btn-danger btn-sm" onclick="asSetOvertime(\'' + o.id + '\',\'rejected\')">No aprobar</button></div>' : '';
+    var mxn = '';
+    if (asCanSeePayroll() && o.status === 'approved') {
+      var rate = getAsistenciaCfg().tarifaExtra;
+      if (rate !== '' && rate != null) mxn = '<small>Admin: ' + fmtMoney((o.minutes / 60) * Number(rate)) + '</small>';
+    }
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(o.userShort || 'Valeria') + ' · ' + esc(o.date) + ' · ' + (o.minutes / 60).toFixed(1) + ' h</b><span class="badge ' + (o.status === 'approved' ? 'badge-green' : o.status === 'rejected' ? 'badge-red' : 'badge-orange') + '">' + esc(asOtStatusLabel(o.status)) + '</span></div><small>' + esc(o.reason) + '</small>' + mxn + acts + '</div>';
   }).join('');
 }
 function asSetOvertime(id, status) {
@@ -3068,21 +3256,48 @@ function asSetOvertime(id, status) {
   showToast(status === 'approved' ? 'Aprobado' : 'Rechazado', 'success');
 }
 function asRenderAdminNomina(list) {
+  if (!asCanSeePayroll()) { list.innerHTML = '<div class="as-empty">Nómina solo para Koke (PIN 0314).</div>'; return; }
   var w = asWorkerUser();
-  var q = asQuincenaRange(new Date());
+  var q = asQuincenaRange(asQAnchorDate());
   var rows = asShiftsInRange(w.pin, q.from, q.to);
-  var ms = rows.reduce(function(a, s) { return a + asWorkedMs(s); }, 0);
+  var days = {};
+  var ms = 0;
+  rows.forEach(function(s) {
+    days[asLocalDateStr(s.startedAt)] = true;
+    ms += asWorkedMs(s);
+  });
+  var dayN = Object.keys(days).length;
   var hours = ms / 3600000;
-  var rate = getAsistenciaCfg().hourlyMxn;
-  var pay = (rate !== '' && rate != null) ? hours * Number(rate) : null;
-  var ot = getAsistenciaOvertime().filter(function(o) { return o.status === 'approved' && o.date >= asLocalDateStr(q.from) && o.date <= asLocalDateStr(q.to); });
+  var cfg = getAsistenciaCfg();
+  var sueldo = cfg.sueldoDia === '' || cfg.sueldoDia == null ? null : Number(cfg.sueldoDia);
+  var extra = cfg.tarifaExtra === '' || cfg.tarifaExtra == null ? null : Number(cfg.tarifaExtra);
+  var ot = getAsistenciaOvertime().filter(function(o) {
+    return o.status === 'approved' && String(o.userPin) === String(w.pin) && o.date >= asLocalDateStr(q.from) && o.date <= asLocalDateStr(q.to);
+  });
   var otH = ot.reduce(function(a, o) { return a + (o.minutes || 0); }, 0) / 60;
-  list.innerHTML = '<div class="as-item"><b>Nómina simple · ' + esc(w.short) + '</b><small>' + q.label + '</small>' +
-    '<div class="as-grid2" style="margin-top:.5rem"><small><b>Horas (pausas fuera):</b> ' + hours.toFixed(2) + 'h</small>' +
+  var basePay = sueldo == null ? null : sueldo * dayN;
+  var extraPay = extra == null ? null : extra * otH;
+  var total = (basePay == null && extraPay == null) ? null : (Number(basePay || 0) + Number(extraPay || 0));
+  var qk = asQKey(w.pin, q);
+  var paid = !!(cfg.paidQuincenas && cfg.paidQuincenas[qk]);
+  list.innerHTML = '<div class="as-cal-nav"><button type="button" class="btn btn-outline btn-sm" onclick="asQNav(-1)">‹</button><b>' + esc(q.label) + '</b><button type="button" class="btn btn-outline btn-sm" onclick="asQNav(1)">›</button></div>' +
+    '<div class="as-item"><b>Nómina simple · ' + esc(w.short) + '</b>' +
+    '<div class="as-grid2" style="margin-top:.5rem"><small><b>Días:</b> ' + dayN + '</small>' +
+    '<small><b>Horas (pausas fuera):</b> ' + hours.toFixed(2) + 'h</small>' +
     '<small><b>Tiempo extra aprobado:</b> ' + otH.toFixed(1) + 'h</small>' +
-    '<small><b>Tarifa:</b> ' + (pay == null ? 'no definida' : fmtMoney(rate) + '/h') + '</small>' +
-    '<small><b>Estimado:</b> ' + (pay == null ? '—' : fmtMoney(pay + otH * Number(rate || 0))) + '</small></div>' +
-    '<small>Sin tarifas escolares. La tarifa se edita en Configuración.</small></div>';
+    '<small><b>Sueldo/día:</b> ' + (sueldo == null ? 'no definido' : fmtMoney(sueldo)) + '</small>' +
+    '<small><b>Tarifa extra:</b> ' + (extra == null ? 'no definida' : fmtMoney(extra) + '/h') + '</small>' +
+    '<small><b>Estimado:</b> ' + (total == null ? '—' : fmtMoney(total)) + '</small></div>' +
+    '<label style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:.85rem"><input type="checkbox" ' + (paid ? 'checked' : '') + ' onchange="asTogglePaid(\'' + esc(w.pin) + '\',\'' + esc(qk) + '\')"> Ya pagué esta quincena</label>' +
+    '<small class="as-muted">Valerie no ve pesos. Sin tarifas escolares.</small></div>';
+}
+function asTogglePaid(pin, qk) {
+  if (!asCanSeePayroll()) return;
+  var cfg = getAsistenciaCfg();
+  cfg.paidQuincenas = cfg.paidQuincenas || {};
+  cfg.paidQuincenas[qk] = !cfg.paidQuincenas[qk];
+  saveData(STORAGE_KEYS.asistenciaCfg, cfg);
+  asRenderAdmin();
 }
 function asRenderAdminPets(list) {
   var rows = getAsistenciaPeticiones().slice().sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
@@ -5823,8 +6038,6 @@ var _sessionActive = false;
 function logoutSession() {
   // Save current data before closing
   try { createSavePoint('auto'); } catch(e) {}
-  try { asLogoutPin(); } catch(e) {}
-  // Clear session markers
   sessionStorage.removeItem('bvg_admin_active');
   sessionStorage.removeItem('bvg_asistencia_session');
   localStorage.removeItem('bvg_last_login');
