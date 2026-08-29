@@ -535,7 +535,7 @@
           <div id="asWhoBar" class="as-who" style="display:none">
             <span id="asWhoName">—</span>
             <span class="as-who-role" id="asWhoRole">—</span>
-            <button type="button" class="btn btn-outline btn-sm" onclick="asLogoutPin()">Cambiar PIN</button>
+            <button type="button" class="btn btn-outline btn-sm" id="asChangePinBtn" onclick="asLogoutPin()">Cambiar PIN</button>
           </div>
         </div>
 
@@ -554,6 +554,7 @@
             <h3>Turno</h3>
             <p class="as-muted">Toca para empezar tu turno. Hora local del dispositivo · Sin GPS.</p>
             <button type="button" class="as-big-btn" onclick="asStartShift()">ENTRAR<br>AL TURNO</button>
+            <button type="button" class="btn btn-outline as-full-btn" style="margin-top:1rem;max-width:220px" onclick="asLogoutPin()">Cambiar PIN</button>
           </div>
 
           <div id="asOnShift" style="display:none">
@@ -592,6 +593,7 @@
               </div>
               <p class="as-muted" style="margin-top:.75rem">Turno guardado con hora de entrada y salida. Tracking de Rentas sigue disponible en el menú.</p>
               <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asGoOffShift()">Volver al inicio</button>
+              <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cambiar PIN</button>
             </div>
           </div>
         </div>
@@ -1663,6 +1665,7 @@ function toggleSidebar() {
 var AS_DEPTO_RATES = { '1401 Sur': 6500, '1404 Norte': 5500, '1204 Norte': null };
 var AS_ADMIN_TAB = 'turnos';
 var _asTimerInt = null;
+var _asJustEnded = null;
 
 function defaultAsistenciaUsers() {
   return [
@@ -1791,6 +1794,7 @@ function asStartShift() {
   if (!asIsPhone()) {
     if (!confirm('Este checador está pensado para celular. ¿Continuar de todos modos?')) return;
   }
+  _asJustEnded = null;
   if (asActiveShift()) { renderAsistencia(); showToast('Ya hay un turno abierto', 'info'); return; }
   var s = {
     id: asUid(), userPin: u.pin, userName: u.name, userShort: u.short,
@@ -1811,6 +1815,7 @@ function asEndShift() {
   saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
   closeModal('asEndModal');
   if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
+  _asJustEnded = s;
   asShowSummary(s);
   if (asIsAdminView()) asRenderAdmin();
   showToast('Turno cerrado', 'success');
@@ -1830,6 +1835,7 @@ function asShowSummary(s) {
 }
 
 function asGoOffShift() {
+  _asJustEnded = null;
   document.getElementById('asSummary').style.display = 'none';
   document.getElementById('asOnShift').style.display = 'none';
   document.getElementById('asOffShift').style.display = '';
@@ -2133,8 +2139,12 @@ function renderAsistencia() {
     document.getElementById('asWhoRole').textContent = u.role === 'admin' ? 'Admin' : 'Trabajadora';
     desk.style.display = asIsPhone() ? 'none' : '';
     var s = asActiveShift();
-    if (s) asGoOnShift(s);
-    else {
+    if (s) {
+      _asJustEnded = null;
+      asGoOnShift(s);
+    } else if (_asJustEnded) {
+      asShowSummary(_asJustEnded);
+    } else {
       document.getElementById('asSummary').style.display = 'none';
       document.getElementById('asOnShift').style.display = 'none';
       document.getElementById('asOffShift').style.display = '';

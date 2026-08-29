@@ -1289,7 +1289,9 @@ input[type="date"] { min-height: 44px; }
 .as-who {
   display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
   font-size: .85rem; color: var(--text-secondary);
+  flex-shrink: 0;
 }
+#asChangePinBtn { min-height: 36px; }
 .as-who-role {
   font-size: .7rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: .04em; color: var(--accent);
