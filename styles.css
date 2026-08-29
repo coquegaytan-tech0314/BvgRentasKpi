@@ -1280,3 +1280,134 @@ input[type="date"] { min-height: 44px; }
   .sidebar, .hamburger, .bottom-nav, .modal-header, .modal-footer, #toastContainer { display: none !important; }
   .receipt-paper { box-shadow: none; width: 100%; }
 }
+
+/* ============================================================
+   ASISTENCIA / TURNOS
+   ============================================================ */
+.as-muted { color: var(--text-muted); font-size: .8rem; margin: 0 0 .75rem; }
+.as-center { text-align: center; }
+.as-who {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  font-size: .85rem; color: var(--text-secondary);
+}
+.as-who-role {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--accent);
+}
+.as-pin-card { max-width: 420px; }
+.as-pin-input {
+  width: 100%;
+  letter-spacing: 12px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  padding: .85rem;
+  margin: .25rem 0 .75rem;
+}
+.as-pin-btn { width: 100%; justify-content: center; }
+.as-desktop-warn {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+  border: 1px solid rgba(234,179,8,.35);
+  border-radius: var(--radius-lg);
+  padding: .75rem 1rem;
+  font-size: .8rem;
+  margin-bottom: 1rem;
+}
+.as-clock-hero { text-align: center; padding: 1.75rem 1.25rem; }
+.as-clock-hero h3 { border-bottom: none; margin-bottom: .35rem; }
+.as-big-btn {
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  line-height: 1.25;
+  box-shadow: 0 18px 40px rgba(37,99,235,.35), inset 0 -6px 0 rgba(0,0,0,.12);
+  margin: .75rem auto 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.as-big-btn:active { transform: scale(.96); }
+.as-running { text-align: center; padding: .5rem 0 1rem; }
+.as-running-lbl { color: var(--text-muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+.as-running-time {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+  margin: .35rem 0 .5rem;
+}
+.as-shift-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+}
+.as-kpi {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .75rem .5rem;
+  text-align: center;
+}
+.as-kpi b { display: block; font-size: 1.15rem; }
+.as-kpi small { color: var(--text-muted); font-size: .7rem; }
+.as-actions { display: grid; gap: .6rem; }
+.as-full-btn { width: 100%; justify-content: center; }
+.as-list { display: flex; flex-direction: column; gap: .5rem; }
+.as-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .75rem .85rem;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.as-item-top { display: flex; justify-content: space-between; gap: .5rem; align-items: flex-start; }
+.as-item small { color: var(--text-muted); font-size: .75rem; }
+.as-empty { color: var(--text-muted); text-align: center; padding: 1rem .5rem; font-size: .85rem; }
+.as-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .15rem .75rem; }
+.as-tabs {
+  display: flex; gap: .35rem;
+  background: var(--bg-input);
+  padding: .35rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin: .75rem 0;
+  overflow-x: auto;
+}
+.as-tab {
+  flex: 1;
+  text-align: center;
+  padding: .55rem .4rem;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  min-width: 70px;
+  min-height: 40px;
+}
+.as-tab.active { background: var(--accent); color: #fff; }
+.as-filterbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem;
+  margin-bottom: .5rem;
+}
+.as-pin-row {
+  display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav a { min-width: 44px; padding: .35rem .1rem; font-size: .55rem; }
+  .as-running-time { font-size: 2.2rem; }
+  .as-grid2 { grid-template-columns: 1fr; }
+  .as-pin-card { max-width: none; }
+}
