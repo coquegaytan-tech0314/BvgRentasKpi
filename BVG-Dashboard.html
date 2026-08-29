@@ -112,6 +112,10 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
           Tracking de Rentas
         </a>
+        <a href="#" data-section="asistencia" onclick="showSection('asistencia')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          Asistencia / Turnos
+        </a>
         <a href="#" data-section="gastos" onclick="showSection('gastos')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
           Gastos
@@ -523,6 +527,113 @@
       </div>
 
       <!-- ============================================================
+           SECTION: ASISTENCIA / TURNOS
+           ============================================================ -->
+      <div class="section" id="sec-asistencia">
+        <div class="page-header">
+          <h2>Asistencia / Turnos</h2>
+          <div id="asWhoBar" class="as-who" style="display:none">
+            <span id="asWhoName">—</span>
+            <span class="as-who-role" id="asWhoRole">—</span>
+            <button type="button" class="btn btn-outline btn-sm" id="asChangePinBtn" onclick="asLogoutPin()">Cambiar PIN</button>
+          </div>
+        </div>
+
+        <div id="asPinGate" class="settings-card as-pin-card">
+          <h3>¿Quién eres?</h3>
+          <p class="as-muted">PIN de 4 dígitos para el checador. No reemplaza la contraseña del dashboard.</p>
+          <input type="tel" id="asPinInput" class="as-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="····" autocomplete="one-time-code" aria-label="PIN de asistencia">
+          <button type="button" class="btn btn-primary as-pin-btn" onclick="asTryPin()">Entrar al checador</button>
+          <p class="as-muted as-center">Valeria (trabajadora) o Koke (admin). Los PINs se pueden cambiar en Configuración.</p>
+        </div>
+
+        <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
+
+        <div id="asWorker" style="display:none">
+          <div id="asOffShift" class="settings-card as-clock-hero">
+            <h3>Turno</h3>
+            <p class="as-muted">Toca para empezar tu turno. Hora local del dispositivo · Sin GPS.</p>
+            <button type="button" class="as-big-btn" onclick="asStartShift()">ENTRAR<br>AL TURNO</button>
+            <button type="button" class="btn btn-outline as-full-btn" style="margin-top:1rem;max-width:220px" onclick="asLogoutPin()">Cambiar PIN</button>
+          </div>
+
+          <div id="asOnShift" style="display:none">
+            <div class="settings-card">
+              <div class="as-running">
+                <div class="as-running-lbl">En turno desde <span id="asShiftStartStr">—</span></div>
+                <div class="as-running-time" id="asRunningTime">00:00:00</div>
+                <span class="badge badge-green">● Turno activo</span>
+              </div>
+              <div class="as-shift-kpis">
+                <div class="as-kpi"><b id="asKpiClientes">0</b><small>clientes</small></div>
+                <div class="as-kpi"><b id="asKpiGastos">$0</b><small>gastos MXN</small></div>
+                <div class="as-kpi"><b id="asKpiEventos">0</b><small>registros</small></div>
+              </div>
+            </div>
+            <div class="settings-card">
+              <div class="as-actions">
+                <button type="button" class="btn btn-success as-full-btn" onclick="asOpenClient()">＋ Registrar cliente</button>
+                <button type="button" class="btn btn-warning as-full-btn" onclick="asOpenExpense()">＋ Registrar gasto</button>
+                <button type="button" class="btn btn-danger as-full-btn" onclick="asConfirmEndShift()">Salir del turno</button>
+              </div>
+            </div>
+            <div class="settings-card">
+              <h3>Actividad del turno</h3>
+              <div id="asShiftEvents" class="as-list"><div class="as-empty">Aún no registras nada.</div></div>
+            </div>
+          </div>
+
+          <div id="asSummary" style="display:none">
+            <div class="settings-card">
+              <h3>Resumen del turno</h3>
+              <div class="as-shift-kpis">
+                <div class="as-kpi"><b id="asSumHoras">0h</b><small>trabajadas</small></div>
+                <div class="as-kpi"><b id="asSumClientes">0</b><small>clientes</small></div>
+                <div class="as-kpi"><b id="asSumGastos">$0</b><small>gastos</small></div>
+              </div>
+              <p class="as-muted" style="margin-top:.75rem">Turno guardado con hora de entrada y salida. Tracking de Rentas sigue disponible en el menú.</p>
+              <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asGoOffShift()">Volver al inicio</button>
+              <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cambiar PIN</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="asAdmin" style="display:none">
+          <div class="settings-card">
+            <h3>Panel de administración — Todos los turnos</h3>
+            <p class="as-muted">Entrar y Salir con hora exacta de Valeria (y cualquier otro PIN). También accesos, clientes y gastos del checador.</p>
+            <div class="as-tabs" id="asAdminTabs">
+              <button type="button" class="as-tab active" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
+              <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
+              <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
+              <button type="button" class="as-tab" data-as-tab="gastos" onclick="asSwitchTab('gastos')">Gastos</button>
+            </div>
+            <div class="as-filterbar">
+              <input type="date" id="asFltFrom" onchange="asRenderAdmin()">
+              <input type="date" id="asFltTo" onchange="asRenderAdmin()">
+            </div>
+            <div class="as-filterbar" id="asFltRow2" style="display:none">
+              <select id="asFltDepto" onchange="asRenderAdmin()">
+                <option value="">Todos los deptos</option>
+                <option value="1401 Sur">1401 Sur</option>
+                <option value="1404 Norte">1404 Norte</option>
+                <option value="1204 Norte">1204 Norte</option>
+              </select>
+              <select id="asFltFuente" onchange="asRenderAdmin()">
+                <option value="">Todas las fuentes</option>
+                <option>Airbnb</option><option>Directo</option><option>Vanesa</option>
+                <option>David</option><option>Miris</option><option>Otro</option>
+              </select>
+            </div>
+            <div style="margin:.5rem 0 1rem">
+              <button type="button" class="btn btn-outline" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
+            </div>
+            <div id="asAdminList" class="as-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
            SECTION 8: CONFIGURACIÓN
            ============================================================ -->
       <div class="section" id="sec-config">
@@ -535,6 +646,22 @@
             <div class="form-group"><label>Nueva contraseña</label><input type="password" id="cfgNewPw"></div>
           </div>
           <button class="btn btn-primary btn-sm" style="margin-top:.75rem" onclick="changePassword()">Guardar Contraseña</button>
+        </div>
+
+        <div class="settings-card admin-only">
+          <h3>PINs de Asistencia / Turnos</h3>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">Identidad del checador (4 dígitos). No reemplaza la contraseña del dashboard. Puedes cambiarlos cuando quieras.</p>
+          <div id="cfgAsistPins"></div>
+          <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap">
+            <input type="text" id="cfgAsNewName" placeholder="Nombre" style="flex:1;min-width:140px">
+            <input type="text" id="cfgAsNewShort" placeholder="Corto" style="width:100px">
+            <input type="password" id="cfgAsNewPin" placeholder="PIN" inputmode="numeric" maxlength="4" style="width:80px">
+            <select id="cfgAsNewRole" style="width:130px">
+              <option value="worker">Trabajadora</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="addAsistenciaUser()">Agregar</button>
+          </div>
         </div>
 
         <div class="settings-card admin-only">
@@ -618,6 +745,10 @@
     <a href="#" data-section="dashboard" class="active" onclick="showSection('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Inicio
+    </a>
+    <a href="#" data-section="asistencia" onclick="showSection('asistencia')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+      Turnos
     </a>
     <a href="#" data-section="tracking" onclick="showSection('tracking')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
@@ -713,6 +844,91 @@
 </div>
 
 <!-- Task Modal -->
+<!-- Asistencia: register client during shift -->
+<div class="modal-overlay" id="asClientModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Registrar cliente</h3><button class="modal-close" onclick="closeModal('asClientModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Huésped *</label><input type="text" id="asCfHuesped" placeholder="Nombre completo"></div>
+        <div class="form-group"><label>Departamento *</label>
+          <select id="asCfDepto" onchange="asCfDeptoChange()">
+            <option value="">Selecciona…</option>
+            <option value="1401 Sur">1401 Sur — $6,500 / noche</option>
+            <option value="1404 Norte">1404 Norte — $5,500 / noche</option>
+            <option value="1204 Norte">1204 Norte</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Fuente *</label>
+          <select id="asCfFuente">
+            <option value="">Selecciona…</option>
+            <option>Airbnb</option><option>Directo</option><option>Vanesa</option>
+            <option>David</option><option>Miris</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Check-in</label><input type="date" id="asCfIn"></div>
+        <div class="form-group"><label>Check-out</label><input type="date" id="asCfOut"></div>
+        <div class="form-group"><label>Encargado</label>
+          <select id="asCfEncargado">
+            <option>Valeria</option><option>Koke</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Noches</label><input type="number" id="asCfNoches" min="0" placeholder="auto" oninput="asCfDeptoChange()"></div>
+        <div class="form-group"><label>Total MXN (si se sabe)</label><input type="number" id="asCfTotal" min="0" placeholder="opcional"></div>
+        <div class="form-group full"><label>Notas</label><textarea id="asCfNotas" rows="2" placeholder="Observaciones, adelantos…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asClientModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="asSaveClient()">Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Asistencia: register gasto during shift -->
+<div class="modal-overlay" id="asExpenseModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Registrar gasto</h3><button class="modal-close" onclick="closeModal('asExpenseModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Concepto *</label><input type="text" id="asEfConcepto" placeholder="Ej. Blanqueador, gas, Uber…"></div>
+        <div class="form-group"><label>Monto MXN *</label><input type="number" id="asEfMonto" min="0" step="0.01"></div>
+        <div class="form-group"><label>Categoría</label>
+          <select id="asEfCategoria">
+            <option>Limpieza</option><option>Amenidades</option><option>Mantenimiento</option>
+            <option>Transporte</option><option>Comida huésped</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Depto (si aplica)</label>
+          <select id="asEfDepto">
+            <option value="">No aplica</option>
+            <option>1401 Sur</option><option>1404 Norte</option><option>1204 Norte</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Notas</label><textarea id="asEfNotas" rows="2" placeholder="Detalle o proveedor"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asExpenseModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="asSaveExpense()">Guardar gasto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Asistencia: confirm end shift -->
+<div class="modal-overlay" id="asEndModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>¿Salir del turno?</h3><button class="modal-close" onclick="closeModal('asEndModal')">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:.9rem;color:var(--text-secondary)">Se guardará tu turno con la hora actual de entrada y salida. No podrás editar los tiempos después.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asEndModal')">Regresar</button>
+      <button class="btn btn-danger" onclick="asEndShift()">Sí, salir del turno</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="taskModal">
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><h3 id="taskModalTitle">Nueva Tarea</h3><button class="modal-close" onclick="closeModal('taskModal')">×</button></div>
@@ -782,7 +998,12 @@ const STORAGE_KEYS = {
   devices: 'bvg_devices',
   deviceId: 'bvg_device_id',
   deviceName: 'bvg_device_name',
-  adminMode: 'bvg_admin_mode'
+  adminMode: 'bvg_admin_mode',
+  shifts: 'bvg_shifts',
+  asistenciaClients: 'bvg_asistencia_clients',
+  asistenciaExpenses: 'bvg_asistencia_expenses',
+  accesos: 'bvg_accesos',
+  asistenciaPins: 'bvg_asistencia_pins'
 };
 
 /* ============================================================
@@ -799,7 +1020,9 @@ var _firebaseSyncPaused = false; // prevents loops when receiving remote updates
 // Keys that should sync to Firebase (shared data)
 var SYNC_KEYS = [
   'bvg_bookings', 'bvg_expenses', 'bvg_tasks', 'bvg_settings',
-  'bvg_receipts', 'bvg_receipt_counter', 'bvg_password'
+  'bvg_receipts', 'bvg_receipt_counter', 'bvg_password',
+  'bvg_shifts', 'bvg_asistencia_clients', 'bvg_asistencia_expenses',
+  'bvg_accesos', 'bvg_asistencia_pins'
 ];
 // Keys that stay LOCAL only (device-specific)
 // bvg_activity_log, bvg_devices, bvg_device_id, bvg_device_name, bvg_admin_mode
@@ -959,6 +1182,7 @@ function _refreshCurrentView() {
       else if (id === 'calendario') renderCalendar();
       else if (id === 'reportes') renderReports();
       else if (id === 'notificaciones') renderNotificaciones();
+      else if (id === 'asistencia') renderAsistencia();
       else if (id === 'config') { renderConfig(); renderHistoryPanel(); }
     } catch(e) { /* view not ready yet */ }
   }, 300);
@@ -1026,6 +1250,8 @@ function applyAdminRestrictions() {
   });
   // Re-render config to apply restrictions
   if (document.getElementById('sec-config')) renderConfig();
+  var asSec = document.getElementById('sec-asistencia');
+  if (asSec && asSec.classList.contains('active')) renderAsistencia();
 }
 
 // Default settings
@@ -1421,12 +1647,582 @@ function showSection(name) {
   else if (name === 'calendario') renderCalendar();
   else if (name === 'reportes') renderReports();
   else if (name === 'notificaciones') renderNotificaciones();
+  else if (name === 'asistencia') renderAsistencia();
   else if (name === 'config') { renderConfig(); renderHistoryPanel(); applyAdminRestrictions(); }
 }
 
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('overlay').classList.toggle('show');
+}
+
+/* ============================================================
+   ASISTENCIA / TURNOS — checador Valerie + panel Koke
+   New Firebase keys only: bvg_shifts, bvg_asistencia_clients,
+   bvg_asistencia_expenses, bvg_accesos, bvg_asistencia_pins
+   Does not write bookings, rental expenses, receipts, tasks, settings.
+   ============================================================ */
+var AS_DEPTO_RATES = { '1401 Sur': 6500, '1404 Norte': 5500, '1204 Norte': null };
+var AS_ADMIN_TAB = 'turnos';
+var _asTimerInt = null;
+var _asJustEnded = null;
+
+function defaultAsistenciaUsers() {
+  return [
+    { pin: '2604', name: 'Valeria Martínez-Calderón', role: 'worker', short: 'Valeria' },
+    { pin: '0314', name: 'Koke', role: 'admin', short: 'Koke' }
+  ];
+}
+function getAsistenciaUsers() {
+  var stored = loadData(STORAGE_KEYS.asistenciaPins);
+  if (Array.isArray(stored) && stored.length) return stored;
+  return defaultAsistenciaUsers();
+}
+function saveAsistenciaUsers(users) { saveData(STORAGE_KEYS.asistenciaPins, users); }
+
+function getAsistenciaShifts() { return loadData(STORAGE_KEYS.shifts) || []; }
+function saveAsistenciaShifts(list) { saveData(STORAGE_KEYS.shifts, list); }
+function getAsistenciaClients() { return loadData(STORAGE_KEYS.asistenciaClients) || []; }
+function saveAsistenciaClients(list) { saveData(STORAGE_KEYS.asistenciaClients, list); }
+function getAsistenciaClockExpenses() { return loadData(STORAGE_KEYS.asistenciaExpenses) || []; }
+function saveAsistenciaClockExpenses(list) { saveData(STORAGE_KEYS.asistenciaExpenses, list); }
+function getAsistenciaAccesos() { return loadData(STORAGE_KEYS.accesos) || []; }
+function saveAsistenciaAccesos(list) { saveData(STORAGE_KEYS.accesos, list); }
+
+function asUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function asPad(n) { return String(n).padStart(2, '0'); }
+function asFmtDateTime(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return asPad(d.getDate()) + '/' + asPad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + asPad(d.getHours()) + ':' + asPad(d.getMinutes()) + ':' + asPad(d.getSeconds());
+}
+function asFmtDate(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return d.getFullYear() + '-' + asPad(d.getMonth() + 1) + '-' + asPad(d.getDate());
+}
+function asFmtTime(ts) {
+  if (!ts) return '—';
+  var d = new Date(ts);
+  return asPad(d.getHours()) + ':' + asPad(d.getMinutes()) + ':' + asPad(d.getSeconds());
+}
+function asFmtDur(ms) {
+  if (!ms || ms < 0) return '—';
+  var h = Math.floor(ms / 3600000);
+  var m = Math.floor(ms / 60000) % 60;
+  return h + 'h ' + asPad(m) + 'm';
+}
+function asToIsoLocal(ts) {
+  var d = new Date(ts);
+  var off = d.getTimezoneOffset();
+  return new Date(ts - off * 60000).toISOString().slice(0, 19).replace('T', ' ');
+}
+function asIsPhone() {
+  var ua = navigator.userAgent || '';
+  var mobileUA = /iPhone|Android.*Mobile|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 1);
+  var smallScreen = Math.min(screen.width, screen.height) <= 500;
+  return mobileUA || (touch && smallScreen);
+}
+function asCurrentUser() {
+  try { return JSON.parse(sessionStorage.getItem('bvg_asistencia_session')) || null; } catch (e) { return null; }
+}
+function asSetSession(u) {
+  if (u) sessionStorage.setItem('bvg_asistencia_session', JSON.stringify(u));
+  else sessionStorage.removeItem('bvg_asistencia_session');
+}
+function asIsAdminView() {
+  var u = asCurrentUser();
+  return (u && u.role === 'admin') || isAdmin();
+}
+function asShiftEvents(s) {
+  if (!s || !s.events) return [];
+  return Array.isArray(s.events) ? s.events : Object.values(s.events);
+}
+function asUpsertById(list, rec) {
+  var i = list.findIndex(function(x) { return x && x.id === rec.id; });
+  if (i >= 0) list[i] = rec; else list.unshift(rec);
+  return list;
+}
+
+function asTryPin() {
+  var input = document.getElementById('asPinInput');
+  var v = (input && input.value ? input.value : '').trim();
+  var u = getAsistenciaUsers().find(function(x) { return String(x.pin) === v; });
+  if (!u) { showToast('PIN incorrecto', 'error'); return; }
+  var sess = { pin: String(u.pin), name: u.name, role: u.role, short: u.short, sessionId: asUid(), loginAt: Date.now() };
+  asSetSession(sess);
+  var acc = {
+    id: sess.sessionId, type: 'login', userPin: sess.pin, userName: u.name, userShort: u.short,
+    loginAt: sess.loginAt, logoutAt: null, device: asIsPhone() ? 'phone' : 'desktop',
+    ua: (navigator.userAgent || '').slice(0, 180)
+  };
+  saveAsistenciaAccesos(asUpsertById(getAsistenciaAccesos(), acc));
+  if (input) input.value = '';
+  renderAsistencia();
+  showToast('Hola, ' + u.short, 'success');
+}
+
+function asLogoutPin() {
+  var u = asCurrentUser();
+  if (u && u.sessionId) {
+    var list = getAsistenciaAccesos();
+    var i = list.findIndex(function(a) { return a && a.id === u.sessionId; });
+    if (i >= 0) {
+      list[i].logoutAt = Date.now();
+      list[i].type = 'logout';
+      saveAsistenciaAccesos(list);
+    }
+  }
+  asSetSession(null);
+  if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
+  renderAsistencia();
+}
+
+function asActiveShift() {
+  var u = asCurrentUser();
+  if (!u) return null;
+  var open = getAsistenciaShifts().filter(function(s) { return s && !s.endedAt && String(s.userPin) === String(u.pin); });
+  if (!open.length) return null;
+  open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
+  return open[0];
+}
+
+function asStartShift() {
+  var u = asCurrentUser();
+  if (!u) { showToast('Ingresa tu PIN primero', 'error'); return; }
+  if (!asIsPhone()) {
+    if (!confirm('Este checador está pensado para celular. ¿Continuar de todos modos?')) return;
+  }
+  _asJustEnded = null;
+  if (asActiveShift()) { renderAsistencia(); showToast('Ya hay un turno abierto', 'info'); return; }
+  var s = {
+    id: asUid(), userPin: u.pin, userName: u.name, userShort: u.short,
+    startedAt: Date.now(), endedAt: null, events: []
+  };
+  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  renderAsistencia();
+  showToast('Turno iniciado', 'success');
+}
+
+function asConfirmEndShift() { openModal('asEndModal'); }
+
+function asEndShift() {
+  var s = asActiveShift();
+  if (!s) { closeModal('asEndModal'); return; }
+  s.endedAt = Date.now();
+  s.durationMs = s.endedAt - s.startedAt;
+  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  closeModal('asEndModal');
+  if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
+  _asJustEnded = s;
+  asShowSummary(s);
+  if (asIsAdminView()) asRenderAdmin();
+  showToast('Turno cerrado', 'success');
+}
+
+function asShowSummary(s) {
+  document.getElementById('asOffShift').style.display = 'none';
+  document.getElementById('asOnShift').style.display = 'none';
+  document.getElementById('asSummary').style.display = '';
+  var ev = asShiftEvents(s);
+  var hrs = (s.durationMs || 0) / 3600000;
+  var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
+  var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
+  document.getElementById('asSumHoras').textContent = hrs.toFixed(2) + 'h';
+  document.getElementById('asSumClientes').textContent = clientes;
+  document.getElementById('asSumGastos').textContent = fmtMoney(gastos);
+}
+
+function asGoOffShift() {
+  _asJustEnded = null;
+  document.getElementById('asSummary').style.display = 'none';
+  document.getElementById('asOnShift').style.display = 'none';
+  document.getElementById('asOffShift').style.display = '';
+  if (asIsAdminView()) asRenderAdmin();
+}
+
+function asGoOnShift(s) {
+  document.getElementById('asSummary').style.display = 'none';
+  document.getElementById('asOffShift').style.display = 'none';
+  document.getElementById('asOnShift').style.display = '';
+  document.getElementById('asShiftStartStr').textContent = asFmtDateTime(s.startedAt);
+  asTickTimer();
+  if (_asTimerInt) clearInterval(_asTimerInt);
+  _asTimerInt = setInterval(asTickTimer, 1000);
+  asRenderShiftEvents(s);
+}
+
+function asTickTimer() {
+  var s = asActiveShift();
+  if (!s) return;
+  var el = document.getElementById('asRunningTime');
+  if (!el) return;
+  var ms = Date.now() - s.startedAt;
+  var h = Math.floor(ms / 3600000);
+  var m = Math.floor(ms / 60000) % 60;
+  var sec = Math.floor(ms / 1000) % 60;
+  el.textContent = asPad(h) + ':' + asPad(m) + ':' + asPad(sec);
+}
+
+function asRenderShiftEvents(s) {
+  s = s || asActiveShift();
+  if (!s) return;
+  var ev = asShiftEvents(s);
+  var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
+  var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
+  document.getElementById('asKpiClientes').textContent = clientes;
+  document.getElementById('asKpiGastos').textContent = fmtMoney(gastos);
+  document.getElementById('asKpiEventos').textContent = ev.length;
+  var container = document.getElementById('asShiftEvents');
+  if (!ev.length) { container.innerHTML = '<div class="as-empty">Aún no registras nada.</div>'; return; }
+  container.innerHTML = ev.slice().reverse().map(function(e) {
+    if (e.type === 'client') {
+      return '<div class="as-item"><div class="as-item-top"><b>Cliente · ' + esc(e.huesped || '—') + '</b><span class="badge badge-blue">' + esc(e.depto || '—') + '</span></div>' +
+        '<small>' + esc(e.fuente || '—') + ' · ' + esc(e.checkIn || '?') + ' → ' + esc(e.checkOut || '?') + ' · ' + (e.total ? fmtMoney(e.total) : 'sin total') + ' · ' + asFmtDateTime(e.ts) + '</small>' +
+        (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + '</div>';
+    }
+    return '<div class="as-item"><div class="as-item-top"><b>Gasto · ' + esc(e.concepto || '—') + '</b><span class="badge badge-red">' + fmtMoney(e.monto) + '</span></div>' +
+      '<small>' + esc(e.categoria || '—') + (e.depto ? ' · ' + esc(e.depto) : '') + ' · ' + asFmtDateTime(e.ts) + '</small>' +
+      (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + '</div>';
+  }).join('');
+}
+
+function asOpenClient() {
+  if (!asActiveShift()) { showToast('Primero entra al turno', 'info'); return; }
+  ['asCfHuesped', 'asCfDepto', 'asCfIn', 'asCfOut', 'asCfFuente', 'asCfNoches', 'asCfTotal', 'asCfNotas'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var u = asCurrentUser();
+  if (u) document.getElementById('asCfEncargado').value = u.short === 'Koke' ? 'Koke' : 'Valeria';
+  openModal('asClientModal');
+}
+function asCfDeptoChange() {
+  var d = document.getElementById('asCfDepto').value;
+  var nights = document.getElementById('asCfNoches').value;
+  var rate = AS_DEPTO_RATES[d];
+  if (rate && nights) document.getElementById('asCfTotal').value = rate * Number(nights);
+}
+function asSaveClient() {
+  var s = asActiveShift(); if (!s) { showToast('Sin turno activo', 'error'); return; }
+  var u = asCurrentUser();
+  var huesped = document.getElementById('asCfHuesped').value.trim();
+  var depto = document.getElementById('asCfDepto').value;
+  var checkIn = document.getElementById('asCfIn').value;
+  var checkOut = document.getElementById('asCfOut').value;
+  var fuente = document.getElementById('asCfFuente').value;
+  var encargado = document.getElementById('asCfEncargado').value;
+  var noches = Number(document.getElementById('asCfNoches').value || 0);
+  if (!noches && checkIn && checkOut) {
+    var days = (new Date(checkOut) - new Date(checkIn)) / 86400000;
+    if (days > 0) noches = Math.round(days);
+  }
+  var total = Number(document.getElementById('asCfTotal').value || 0);
+  if (!total && AS_DEPTO_RATES[depto] && noches) total = AS_DEPTO_RATES[depto] * noches;
+  var notas = document.getElementById('asCfNotas').value.trim();
+  if (!huesped) { showToast('Falta el nombre del huésped', 'error'); return; }
+  if (!depto) { showToast('Falta el depto', 'error'); return; }
+  if (!fuente) { showToast('Falta la fuente', 'error'); return; }
+  var rec = {
+    id: asUid(), type: 'client', ts: Date.now(), shiftId: s.id,
+    userPin: u.pin, userName: u.name, userShort: u.short,
+    huesped: huesped, depto: depto, checkIn: checkIn, checkOut: checkOut,
+    noches: noches, total: total, fuente: fuente, encargado: encargado, notas: notas
+  };
+  s.events = asShiftEvents(s);
+  s.events.push(rec);
+  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  saveAsistenciaClients(asUpsertById(getAsistenciaClients(), rec));
+  closeModal('asClientModal');
+  asRenderShiftEvents(s);
+  if (asIsAdminView()) asRenderAdmin();
+  showToast('Cliente guardado', 'success');
+}
+
+function asOpenExpense() {
+  if (!asActiveShift()) { showToast('Primero entra al turno', 'info'); return; }
+  ['asEfConcepto', 'asEfMonto', 'asEfNotas'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('asEfCategoria').value = 'Limpieza';
+  document.getElementById('asEfDepto').value = '';
+  openModal('asExpenseModal');
+}
+function asSaveExpense() {
+  var s = asActiveShift(); if (!s) { showToast('Sin turno activo', 'error'); return; }
+  var u = asCurrentUser();
+  var concepto = document.getElementById('asEfConcepto').value.trim();
+  var monto = Number(document.getElementById('asEfMonto').value || 0);
+  var categoria = document.getElementById('asEfCategoria').value;
+  var depto = document.getElementById('asEfDepto').value;
+  var notas = document.getElementById('asEfNotas').value.trim();
+  if (!concepto) { showToast('Falta el concepto', 'error'); return; }
+  if (!monto || monto <= 0) { showToast('Monto inválido', 'error'); return; }
+  var rec = {
+    id: asUid(), type: 'expense', ts: Date.now(), shiftId: s.id,
+    userPin: u.pin, userName: u.name, userShort: u.short,
+    concepto: concepto, monto: monto, categoria: categoria, depto: depto, notas: notas
+  };
+  s.events = asShiftEvents(s);
+  s.events.push(rec);
+  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  saveAsistenciaClockExpenses(asUpsertById(getAsistenciaClockExpenses(), rec));
+  closeModal('asExpenseModal');
+  asRenderShiftEvents(s);
+  if (asIsAdminView()) asRenderAdmin();
+  showToast('Gasto guardado', 'success');
+}
+
+function asSwitchTab(t) {
+  AS_ADMIN_TAB = t;
+  document.querySelectorAll('#asAdminTabs .as-tab').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-as-tab') === t);
+  });
+  document.getElementById('asFltRow2').style.display = (t === 'clientes' || t === 'gastos') ? '' : 'none';
+  asRenderAdmin();
+}
+
+function asWithinRange(ts) {
+  var fromEl = document.getElementById('asFltFrom');
+  var toEl = document.getElementById('asFltTo');
+  var from = fromEl && fromEl.value;
+  var to = toEl && toEl.value;
+  var d = new Date(ts);
+  if (from && d < new Date(from + 'T00:00:00')) return false;
+  if (to && d > new Date(to + 'T23:59:59')) return false;
+  return true;
+}
+
+function asFilteredAdminRows() {
+  var deptoEl = document.getElementById('asFltDepto');
+  var fuenteEl = document.getElementById('asFltFuente');
+  var depto = deptoEl ? deptoEl.value : '';
+  var fuente = fuenteEl ? fuenteEl.value : '';
+  if (AS_ADMIN_TAB === 'turnos') {
+    return getAsistenciaShifts().filter(function(s) { return s && asWithinRange(s.startedAt); })
+      .sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
+  }
+  if (AS_ADMIN_TAB === 'accesos') {
+    return getAsistenciaAccesos().filter(function(a) { return a && asWithinRange(a.loginAt); })
+      .sort(function(a, b) { return (b.loginAt || 0) - (a.loginAt || 0); });
+  }
+  if (AS_ADMIN_TAB === 'clientes') {
+    return getAsistenciaClients().filter(function(r) {
+      if (!r || !asWithinRange(r.ts)) return false;
+      if (depto && r.depto !== depto) return false;
+      if (fuente && r.fuente !== fuente) return false;
+      return true;
+    }).sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); });
+  }
+  return getAsistenciaClockExpenses().filter(function(r) {
+    if (!r || !asWithinRange(r.ts)) return false;
+    if (depto && r.depto !== depto) return false;
+    return true;
+  }).sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); });
+}
+
+function asRenderAdmin() {
+  if (!asIsAdminView()) return;
+  var list = document.getElementById('asAdminList');
+  if (!list) return;
+  var rows = asFilteredAdminRows();
+  if (AS_ADMIN_TAB === 'turnos') {
+    if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin turnos en este rango.</div>'; return; }
+    list.innerHTML = rows.map(function(s) {
+      var open = !s.endedAt;
+      var hrsMs = (s.endedAt || Date.now()) - s.startedAt;
+      var ev = asShiftEvents(s);
+      var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
+      var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
+      var numGastos = ev.filter(function(e) { return e && e.type === 'expense'; }).length;
+      return '<div class="as-item"><div class="as-item-top"><b>' + esc(s.userShort || s.userName || '—') + '</b><span class="badge ' + (open ? 'badge-orange' : 'badge-green') + '">' + (open ? '● en curso' : asFmtDur(hrsMs)) + '</span></div>' +
+        '<div class="as-grid2">' +
+        '<small><b>Fecha:</b> ' + asFmtDate(s.startedAt) + '</small>' +
+        '<small><b>Duración:</b> ' + (open ? '—' : asFmtDur(hrsMs)) + '</small>' +
+        '<small><b>Entrar:</b> ' + asFmtDateTime(s.startedAt) + '</small>' +
+        '<small><b>Salir:</b> ' + (s.endedAt ? asFmtDateTime(s.endedAt) : '—') + '</small>' +
+        '<small><b>Clientes:</b> ' + clientes + '</small>' +
+        '<small><b>Gastos:</b> ' + numGastos + ' · ' + fmtMoney(gastos) + '</small>' +
+        '</div></div>';
+    }).join('');
+  } else if (AS_ADMIN_TAB === 'accesos') {
+    if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin accesos en este rango.</div>'; return; }
+    list.innerHTML = rows.map(function(a) {
+      var dur = a.logoutAt ? asFmtDur(a.logoutAt - a.loginAt) : 'sesión abierta';
+      return '<div class="as-item"><div class="as-item-top"><b>' + esc(a.userShort || a.userName || '—') + '</b><span class="badge ' + (a.logoutAt ? 'badge-blue' : 'badge-orange') + '">' + (a.logoutAt ? dur : '● activa') + '</span></div>' +
+        '<div class="as-grid2">' +
+        '<small><b>Fecha:</b> ' + asFmtDate(a.loginAt) + '</small>' +
+        '<small><b>Dispositivo:</b> ' + esc(a.device || '—') + '</small>' +
+        '<small><b>Entrada app:</b> ' + asFmtDateTime(a.loginAt) + '</small>' +
+        '<small><b>Salida app:</b> ' + (a.logoutAt ? asFmtDateTime(a.logoutAt) : '—') + '</small>' +
+        '</div></div>';
+    }).join('');
+  } else if (AS_ADMIN_TAB === 'clientes') {
+    if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin clientes en este rango.</div>'; return; }
+    list.innerHTML = rows.map(function(r) {
+      return '<div class="as-item"><div class="as-item-top"><b>' + esc(r.huesped || '—') + '</b><span class="badge badge-blue">' + esc(r.depto || '—') + '</span></div>' +
+        '<small>' + esc(r.fuente || '—') + ' · ' + esc(r.checkIn || '?') + ' → ' + esc(r.checkOut || '?') + ' · ' + (r.noches || 0) + 'n · ' + (r.total ? fmtMoney(r.total) : 'sin total') + '</small>' +
+        '<small>Registrado por ' + esc(r.userShort || '—') + ' · ' + asFmtDateTime(r.ts) + ' · Encargado: ' + esc(r.encargado || '—') + '</small>' +
+        (r.notas ? '<small>' + esc(r.notas) + '</small>' : '') + '</div>';
+    }).join('');
+  } else {
+    if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin gastos en este rango.</div>'; return; }
+    list.innerHTML = rows.map(function(r) {
+      return '<div class="as-item"><div class="as-item-top"><b>' + esc(r.concepto || '—') + '</b><span class="badge badge-red">' + fmtMoney(r.monto) + '</span></div>' +
+        '<small>' + esc(r.categoria || '—') + (r.depto ? ' · ' + esc(r.depto) : '') + ' · Registrado por ' + esc(r.userShort || '—') + ' · ' + asFmtDateTime(r.ts) + '</small>' +
+        (r.notas ? '<small>' + esc(r.notas) + '</small>' : '') + '</div>';
+    }).join('');
+  }
+}
+
+function asCsvCell(v) {
+  if (v === null || v === undefined) return '';
+  var s = String(v).replace(/"/g, '""');
+  return /[",\n;]/.test(s) ? '"' + s + '"' : s;
+}
+function exportAsistenciaCSV() {
+  if (!asIsAdminView()) { showToast('Solo admin puede exportar', 'error'); return; }
+  var rows = asFilteredAdminRows();
+  var headers = [], mapped = [], name = '';
+  if (AS_ADMIN_TAB === 'turnos') {
+    headers = ['fecha', 'trabajador', 'entrar', 'salir', 'duracion_horas', 'estado', 'clientes', 'gastos_num', 'gastos_mxn', 'shift_id'];
+    mapped = rows.map(function(s) {
+      var open = !s.endedAt;
+      var hrs = ((s.endedAt || Date.now()) - s.startedAt) / 3600000;
+      var ev = asShiftEvents(s);
+      var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
+      var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
+      var numGastos = ev.filter(function(e) { return e && e.type === 'expense'; }).length;
+      return [asFmtDate(s.startedAt), s.userShort || s.userName || '', asFmtDateTime(s.startedAt), s.endedAt ? asFmtDateTime(s.endedAt) : '',
+        open ? '' : hrs.toFixed(2), open ? 'en_curso' : 'cerrado', clientes, numGastos, gastos, s.id];
+    });
+    name = 'bvg_turnos.csv';
+  } else if (AS_ADMIN_TAB === 'accesos') {
+    headers = ['fecha', 'trabajador', 'entrada_app', 'salida_app', 'duracion_horas', 'dispositivo', 'session_id'];
+    mapped = rows.map(function(a) {
+      var dur = a.logoutAt ? ((a.logoutAt - a.loginAt) / 3600000).toFixed(2) : '';
+      return [asFmtDate(a.loginAt), a.userShort || a.userName || '', asFmtDateTime(a.loginAt), a.logoutAt ? asFmtDateTime(a.logoutAt) : '',
+        dur, a.device || '', a.id];
+    });
+    name = 'bvg_accesos.csv';
+  } else if (AS_ADMIN_TAB === 'clientes') {
+    headers = ['fecha_registro', 'huesped', 'depto', 'fuente', 'check_in', 'check_out', 'noches', 'total_mxn', 'encargado', 'registrado_por', 'notas', 'cliente_id', 'shift_id'];
+    mapped = rows.map(function(x) {
+      return [asToIsoLocal(x.ts), x.huesped, x.depto, x.fuente, x.checkIn, x.checkOut, x.noches || '', x.total || '', x.encargado, x.userShort || '', x.notas || '', x.id, x.shiftId];
+    });
+    name = 'bvg_asistencia_clientes.csv';
+  } else {
+    headers = ['fecha_registro', 'concepto', 'monto_mxn', 'categoria', 'depto', 'registrado_por', 'notas', 'gasto_id', 'shift_id'];
+    mapped = rows.map(function(x) {
+      return [asToIsoLocal(x.ts), x.concepto, x.monto, x.categoria, x.depto || '', x.userShort || '', x.notas || '', x.id, x.shiftId];
+    });
+    name = 'bvg_asistencia_gastos.csv';
+  }
+  if (!mapped.length) { showToast('No hay datos para exportar', 'info'); return; }
+  var csv = [headers].concat(mapped).map(function(r) { return r.map(asCsvCell).join(','); }).join('\n');
+  downloadFile('\uFEFF' + csv, name, 'text/csv;charset=utf-8');
+}
+
+function renderAsistencia() {
+  var u = asCurrentUser();
+  var pinGate = document.getElementById('asPinGate');
+  var worker = document.getElementById('asWorker');
+  var admin = document.getElementById('asAdmin');
+  var whoBar = document.getElementById('asWhoBar');
+  var desk = document.getElementById('asDesktopWarn');
+  if (!pinGate) return;
+  pinGate.style.display = u ? 'none' : '';
+  worker.style.display = u ? '' : 'none';
+  whoBar.style.display = u ? 'flex' : 'none';
+  if (u) {
+    document.getElementById('asWhoName').textContent = u.short || u.name;
+    document.getElementById('asWhoRole').textContent = u.role === 'admin' ? 'Admin' : 'Trabajadora';
+    desk.style.display = asIsPhone() ? 'none' : '';
+    var s = asActiveShift();
+    if (s) {
+      _asJustEnded = null;
+      asGoOnShift(s);
+    } else if (_asJustEnded) {
+      asShowSummary(_asJustEnded);
+    } else {
+      document.getElementById('asSummary').style.display = 'none';
+      document.getElementById('asOnShift').style.display = 'none';
+      document.getElementById('asOffShift').style.display = '';
+      if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
+    }
+  } else {
+    desk.style.display = 'none';
+    if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
+  }
+  admin.style.display = asIsAdminView() ? '' : 'none';
+  if (asIsAdminView()) asRenderAdmin();
+  var pinInput = document.getElementById('asPinInput');
+  if (pinInput && !u) {
+    pinInput.onkeydown = function(e) { if (e.key === 'Enter') asTryPin(); };
+    setTimeout(function() { try { pinInput.focus(); } catch (err) {} }, 80);
+  }
+}
+
+function renderAsistenciaPins() {
+  var box = document.getElementById('cfgAsistPins');
+  if (!box) return;
+  var users = getAsistenciaUsers();
+  box.innerHTML = users.map(function(u, i) {
+    return '<div class="as-pin-row">' +
+      '<input type="text" value="' + esc(u.name || '') + '" onchange="updateAsistenciaUser(' + i + ',\'name\',this.value)" style="flex:1;min-width:140px">' +
+      '<input type="text" value="' + esc(u.short || '') + '" onchange="updateAsistenciaUser(' + i + ',\'short\',this.value)" style="width:90px" placeholder="Corto">' +
+      '<input type="text" value="' + esc(String(u.pin || '')) + '" inputmode="numeric" maxlength="4" onchange="updateAsistenciaUser(' + i + ',\'pin\',this.value)" style="width:80px" placeholder="PIN">' +
+      '<select onchange="updateAsistenciaUser(' + i + ',\'role\',this.value)" style="width:130px">' +
+        '<option value="worker"' + (u.role === 'worker' ? ' selected' : '') + '>Trabajadora</option>' +
+        '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
+      '</select>' +
+      '<button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="removeAsistenciaUser(' + i + ')">🗑</button>' +
+      '</div>';
+  }).join('') || '<div style="color:var(--text-muted);font-size:.85rem">Usando PINs por defecto (2604 Valeria, 0314 Koke).</div>';
+}
+
+function updateAsistenciaUser(i, key, val) {
+  if (adminGuard()) return;
+  var users = getAsistenciaUsers().map(function(u) { return Object.assign({}, u); });
+  if (!users[i]) return;
+  if (key === 'pin') {
+    val = String(val || '').replace(/\D/g, '').slice(0, 4);
+    if (val.length !== 4) { showToast('El PIN debe tener 4 dígitos', 'error'); renderAsistenciaPins(); return; }
+    var clash = users.some(function(u, j) { return j !== i && String(u.pin) === val; });
+    if (clash) { showToast('Ese PIN ya está en uso', 'error'); renderAsistenciaPins(); return; }
+  }
+  users[i][key] = val;
+  saveAsistenciaUsers(users);
+  renderAsistenciaPins();
+  showToast('PIN / usuario actualizado', 'success', 1500);
+}
+
+function addAsistenciaUser() {
+  if (adminGuard()) return;
+  var name = (document.getElementById('cfgAsNewName').value || '').trim();
+  var short = (document.getElementById('cfgAsNewShort').value || '').trim() || name;
+  var pin = (document.getElementById('cfgAsNewPin').value || '').replace(/\D/g, '').slice(0, 4);
+  var role = document.getElementById('cfgAsNewRole').value || 'worker';
+  if (!name || pin.length !== 4) { showToast('Nombre y PIN de 4 dígitos', 'error'); return; }
+  var users = getAsistenciaUsers().map(function(u) { return Object.assign({}, u); });
+  if (users.some(function(u) { return String(u.pin) === pin; })) { showToast('Ese PIN ya está en uso', 'error'); return; }
+  users.push({ pin: pin, name: name, role: role, short: short });
+  saveAsistenciaUsers(users);
+  document.getElementById('cfgAsNewName').value = '';
+  document.getElementById('cfgAsNewShort').value = '';
+  document.getElementById('cfgAsNewPin').value = '';
+  renderAsistenciaPins();
+  showToast('Usuario de asistencia agregado', 'success');
+}
+
+function removeAsistenciaUser(i) {
+  if (adminGuard()) return;
+  var users = getAsistenciaUsers().map(function(u) { return Object.assign({}, u); });
+  if (users.length <= 1) { showToast('Deja al menos un PIN', 'error'); return; }
+  users.splice(i, 1);
+  saveAsistenciaUsers(users);
+  renderAsistenciaPins();
+  showToast('Usuario eliminado', 'info');
 }
 
 /* ============================================================
@@ -3354,6 +4150,8 @@ function renderConfig() {
   document.getElementById('cfgFuentes').innerHTML = settings.fuentes.map((f, i) =>
     '<span class="badge" style="background:var(--bg-hover);color:var(--text-primary);margin:.15rem .25rem;cursor:pointer" title="Click para eliminar" onclick="removeFuente(' + i + ')">' + f + ' ×</span>'
   ).join('');
+
+  renderAsistenciaPins();
 }
 
 function adminGuard() { if (!isAdmin()) { showToast('No tienes permisos para esta acción', 'error'); return true; } return false; }
@@ -3424,6 +4222,11 @@ function exportAllJSON() {
     receipts: getReceipts(),
     activityLog: getActivityLog(),
     devices: getDevices(),
+    shifts: getAsistenciaShifts(),
+    asistenciaClients: getAsistenciaClients(),
+    asistenciaExpenses: getAsistenciaClockExpenses(),
+    accesos: getAsistenciaAccesos(),
+    asistenciaPins: getAsistenciaUsers(),
     exportDate: new Date().toISOString()
   };
   downloadFile(JSON.stringify(data, null, 2), 'bvg-backup-' + new Date().toISOString().split('T')[0] + '.json', 'application/json');
@@ -3474,6 +4277,11 @@ function importJSON(event) {
       if (data.receipts) saveData(STORAGE_KEYS.receipts, data.receipts);
       if (data.activityLog) saveActivityLog(data.activityLog);
       if (data.devices) saveDevices(data.devices);
+      if (data.shifts) saveAsistenciaShifts(data.shifts);
+      if (data.asistenciaClients) saveAsistenciaClients(data.asistenciaClients);
+      if (data.asistenciaExpenses) saveAsistenciaClockExpenses(data.asistenciaExpenses);
+      if (data.accesos) saveAsistenciaAccesos(data.accesos);
+      if (data.asistenciaPins) saveAsistenciaUsers(data.asistenciaPins);
       logActivity('export', 'Datos importados', 'Backup JSON restaurado');
       showToast('Datos importados correctamente', 'success');
       setTimeout(() => location.reload(), 1000);
@@ -3507,7 +4315,12 @@ function gatherSnapshot() {
     receiptCounter: parseInt(localStorage.getItem(STORAGE_KEYS.receiptCounter)) || 33,
     password: getPassword(),
     activityLog: getActivityLog(),
-    devices: getDevices()
+    devices: getDevices(),
+    shifts: getAsistenciaShifts(),
+    asistenciaClients: getAsistenciaClients(),
+    asistenciaExpenses: getAsistenciaClockExpenses(),
+    accesos: getAsistenciaAccesos(),
+    asistenciaPins: getAsistenciaUsers()
   };
 }
 
@@ -3528,6 +4341,9 @@ function detectChanges(oldSnap, newSnap) {
   if (rNew !== rOld) changes.push('Recibos: ' + rOld + ' → ' + rNew);
   else if (JSON.stringify(oldSnap.receipts) !== JSON.stringify(newSnap.receipts)) changes.push('Recibos modificados');
   if (JSON.stringify(oldSnap.settings) !== JSON.stringify(newSnap.settings)) changes.push('Configuración');
+  var shOld = (oldSnap.shifts || []).length, shNew = (newSnap.shifts || []).length;
+  if (shNew !== shOld) changes.push('Turnos: ' + shOld + ' → ' + shNew);
+  else if (JSON.stringify(oldSnap.shifts || []) !== JSON.stringify(newSnap.shifts || [])) changes.push('Turnos modificados');
   if (changes.length === 0) changes.push('Sin cambios detectados');
   return changes;
 }
@@ -3754,6 +4570,11 @@ function confirmRestore() {
   if (snap.password) setPassword(snap.password);
   if (snap.activityLog) saveActivityLog(snap.activityLog);
   if (snap.devices) saveDevices(snap.devices);
+  if (snap.shifts) saveAsistenciaShifts(snap.shifts);
+  if (snap.asistenciaClients) saveAsistenciaClients(snap.asistenciaClients);
+  if (snap.asistenciaExpenses) saveAsistenciaClockExpenses(snap.asistenciaExpenses);
+  if (snap.accesos) saveAsistenciaAccesos(snap.accesos);
+  if (snap.asistenciaPins) saveAsistenciaUsers(snap.asistenciaPins);
   closeRestoreModal();
   showToast('Versión restaurada exitosamente. Recargando...', 'success', 2000);
   setTimeout(function() { location.reload(); }, 1500);
@@ -4101,8 +4922,10 @@ var _sessionActive = false;
 function logoutSession() {
   // Save current data before closing
   try { createSavePoint('auto'); } catch(e) {}
+  try { asLogoutPin(); } catch(e) {}
   // Clear session markers
   sessionStorage.removeItem('bvg_admin_active');
+  sessionStorage.removeItem('bvg_asistencia_session');
   localStorage.removeItem('bvg_last_login');
   _sessionActive = false;
   // Stop timers
