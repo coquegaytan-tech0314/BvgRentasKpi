@@ -1412,10 +1412,66 @@ input[type="date"] { min-height: 44px; }
 .as-pin-row {
   display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; flex-wrap: wrap;
 }
+.as-tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+.as-badge-count {
+  display: inline-block;
+  min-width: 1.25rem;
+  padding: 0 .35rem;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  font-size: .7rem;
+  margin-left: .25rem;
+}
+.as-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.as-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: .4rem .75rem;
+  font-size: .75rem;
+  font-weight: 700;
+  min-height: 36px;
+}
+.as-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.as-thumbs { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.as-thumb-wrap { position: relative; width: 72px; height: 72px; }
+.as-thumb-wrap img, .as-thumb {
+  width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);
+}
+.as-thumb-wrap button {
+  position: absolute; top: -6px; right: -6px;
+  width: 22px; height: 22px; min-height: 22px;
+  border-radius: 50%; border: none; background: var(--red); color: #fff; font-size: 12px;
+}
+.as-item-actions { display: flex; gap: .4rem; margin-top: .4rem; flex-wrap: wrap; }
+.as-stepper { display: flex; align-items: center; gap: .75rem; min-height: 44px; }
+.as-paused { color: var(--orange); }
+.as-cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+.as-cal-week, .as-cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: .25rem; text-align: center;
+}
+.as-cal-week { color: var(--text-muted); font-size: .7rem; font-weight: 700; margin-bottom: .35rem; }
+.as-cal-cell {
+  min-height: 36px; border-radius: 8px; background: var(--bg-input);
+  border: 1px solid var(--border); font-size: .75rem; padding: .35rem 0; position: relative;
+}
+.as-cal-cell.empty { background: transparent; border-color: transparent; }
+.as-cal-cell.worked { border-color: var(--accent); }
+.as-cal-dot {
+  display: block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); margin: 2px auto 0;
+}
 
 @media (max-width: 768px) {
   .bottom-nav a { min-width: 44px; padding: .35rem .1rem; font-size: .55rem; }
   .as-running-time { font-size: 2.2rem; }
   .as-grid2 { grid-template-columns: 1fr; }
   .as-pin-card { max-width: none; }
+  .as-tool-grid { grid-template-columns: 1fr; }
 }

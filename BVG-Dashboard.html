@@ -550,6 +550,69 @@
         <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
 
         <div id="asWorker" style="display:none">
+          <div id="asWorkerHome">
+            <div class="settings-card">
+              <h3>Mi día / mis turnos</h3>
+              <div class="as-shift-kpis">
+                <div class="as-kpi"><b id="asMyHoursToday">0h</b><small>hoy</small></div>
+                <div class="as-kpi"><b id="asMyHoursWeek">0h</b><small>esta semana</small></div>
+                <div class="as-kpi"><b id="asMyLastN">0</b><small>cerrados</small></div>
+              </div>
+              <div id="asMyLastShifts" class="as-list" style="margin-top:.75rem"><div class="as-empty">Aún no tienes turnos cerrados.</div></div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Mi quincena</h3>
+              <p class="as-muted" id="asQLabel">—</p>
+              <div class="as-shift-kpis">
+                <div class="as-kpi"><b id="asQDays">0</b><small>días trabajados</small></div>
+                <div class="as-kpi"><b id="asQHours">0h</b><small>horas totales</small></div>
+                <div class="as-kpi"><b id="asQPunct">—</b><small>puntualidad</small></div>
+              </div>
+            </div>
+
+            <div class="settings-card">
+              <h3>Hoy en los deptos</h3>
+              <p class="as-muted">Check-ins y check-outs de hoy (solo lectura). Tracking de Rentas sigue en el menú.</p>
+              <div id="asTodayStays" class="as-list"><div class="as-empty">Nada entra ni sale hoy.</div></div>
+            </div>
+
+            <div class="as-tool-grid">
+              <button type="button" class="btn btn-outline as-full-btn" onclick="asShowWorkerPanel('tareas')">📌 Mis tareas <span class="as-badge-count" id="asTaskBadge">0</span></button>
+              <button type="button" class="btn btn-outline as-full-btn" onclick="asOpenPeticion('material')">🧰 Pedir material</button>
+              <button type="button" class="btn btn-outline as-full-btn" onclick="asOpenPeticion('duda')">🙋 Duda o queja</button>
+              <button type="button" class="btn btn-outline as-full-btn" onclick="asShowWorkerPanel('peticiones')">📨 Mis peticiones <span class="as-badge-count" id="asPetBadge">0</span></button>
+              <button type="button" class="btn btn-outline as-full-btn" onclick="asShowWorkerPanel('extra')">⏰ Tiempo extra <span class="as-badge-count" id="asOtBadge">0</span></button>
+            </div>
+
+            <div id="asPanelTareas" class="settings-card" style="display:none">
+              <h3>Mis tareas</h3>
+              <p class="as-muted">Lo que Koke te asignó. Márcalas hechas cuando termines.</p>
+              <div id="asMyTasks" class="as-list"></div>
+            </div>
+            <div id="asPanelPeticiones" class="settings-card" style="display:none">
+              <h3>Mis peticiones</h3>
+              <div id="asMyPets" class="as-list"></div>
+            </div>
+            <div id="asPanelExtra" class="settings-card" style="display:none">
+              <h3>Tiempo extra</h3>
+              <p class="as-muted">Repórtalo en pasos de 30 min. Koke lo aprueba.</p>
+              <div class="form-grid">
+                <div class="form-group"><label>Día</label><input type="date" id="asOtDate"></div>
+                <div class="form-group"><label>Horas extra</label>
+                  <div class="as-stepper">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="asOtStep(-30)">−</button>
+                    <b id="asOtHoursLbl">0.5 h</b>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="asOtStep(30)">+</button>
+                  </div>
+                </div>
+                <div class="form-group full"><label>¿Por qué te quedaste?</label><textarea id="asOtReason" rows="2" placeholder="Motivo"></textarea></div>
+              </div>
+              <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asSubmitOvertime()">Enviar a Koke</button>
+              <div id="asMyOt" class="as-list" style="margin-top:.75rem"></div>
+            </div>
+          </div>
+
           <div id="asOffShift" class="settings-card as-clock-hero">
             <h3>Turno</h3>
             <p class="as-muted">Toca para empezar tu turno. Hora local del dispositivo · Sin GPS.</p>
@@ -562,7 +625,7 @@
               <div class="as-running">
                 <div class="as-running-lbl">En turno desde <span id="asShiftStartStr">—</span></div>
                 <div class="as-running-time" id="asRunningTime">00:00:00</div>
-                <span class="badge badge-green">● Turno activo</span>
+                <span class="badge badge-green" id="asShiftStateBadge">● Turno activo</span>
               </div>
               <div class="as-shift-kpis">
                 <div class="as-kpi"><b id="asKpiClientes">0</b><small>clientes</small></div>
@@ -571,14 +634,33 @@
               </div>
             </div>
             <div class="settings-card">
+              <h3>Nota del turno</h3>
+              <textarea id="asShiftNote" rows="2" placeholder="Qué estás haciendo, un cliente, un follow-up de WhatsApp…" onblur="asSaveShiftNote()"></textarea>
+              <button type="button" class="btn btn-outline btn-sm" style="margin-top:.5rem" onclick="asSaveShiftNote()">Guardar nota</button>
+            </div>
+            <div class="settings-card">
               <div class="as-actions">
                 <button type="button" class="btn btn-success as-full-btn" onclick="asOpenClient()">＋ Registrar cliente</button>
                 <button type="button" class="btn btn-warning as-full-btn" onclick="asOpenExpense()">＋ Registrar gasto</button>
-                <button type="button" class="btn btn-danger as-full-btn" onclick="asConfirmEndShift()">Salir del turno</button>
+                <button type="button" class="btn btn-outline as-full-btn" id="asPauseBtn" onclick="asTogglePause()">⏸ Pausa / receso</button>
+                <button type="button" class="btn btn-danger as-full-btn" id="asSalirBtn" onclick="asConfirmEndShift()">Salir del turno</button>
               </div>
+              <p class="as-muted" id="asSalirHint" style="margin-top:.5rem">Primero guarda tu reporte del día para poder salir.</p>
+            </div>
+            <div class="settings-card" id="asDayReport">
+              <h3>¿Qué hiciste hoy?</h3>
+              <p class="as-muted">Obligatorio antes de SALIR. Elige al menos una actividad.</p>
+              <div class="as-chips" id="asDayChips"></div>
+              <textarea id="asDayText" rows="2" placeholder="Detalle opcional" style="margin-top:.5rem"></textarea>
+              <label class="as-muted" style="display:block;margin-top:.6rem">📷 Fotos del trabajo (opcional)</label>
+              <input type="file" id="asDayFoto" accept="image/*" capture="environment" onchange="asHandleDayPhoto(this)">
+              <div id="asDayThumbs" class="as-thumbs"></div>
+              <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asSaveDayReport()">Guardar reporte del día</button>
+              <p class="as-muted" id="asDayReportOk" style="display:none;margin-top:.5rem;color:var(--green)">Reporte guardado. Ya puedes salir del turno.</p>
             </div>
             <div class="settings-card">
               <h3>Actividad del turno</h3>
+              <p class="as-muted">Puedes editar o borrar un cliente/gasto de ESTE turno.</p>
               <div id="asShiftEvents" class="as-list"><div class="as-empty">Aún no registras nada.</div></div>
             </div>
           </div>
@@ -591,7 +673,7 @@
                 <div class="as-kpi"><b id="asSumClientes">0</b><small>clientes</small></div>
                 <div class="as-kpi"><b id="asSumGastos">$0</b><small>gastos</small></div>
               </div>
-              <p class="as-muted" style="margin-top:.75rem">Turno guardado con hora de entrada y salida. Tracking de Rentas sigue disponible en el menú.</p>
+              <p class="as-muted" style="margin-top:.75rem">Turno guardado con hora de entrada y salida (pausas descontadas). Tracking de Rentas sigue disponible en el menú.</p>
               <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asGoOffShift()">Volver al inicio</button>
               <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cambiar PIN</button>
             </div>
@@ -603,7 +685,13 @@
             <h3>Panel de administración — Todos los turnos</h3>
             <p class="as-muted">Entrar y Salir con hora exacta de Valeria (y cualquier otro PIN). También accesos, clientes y gastos del checador.</p>
             <div class="as-tabs" id="asAdminTabs">
-              <button type="button" class="as-tab active" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
+              <button type="button" class="as-tab active" data-as-tab="resumen" onclick="asSwitchTab('resumen')">Resumen</button>
+              <button type="button" class="as-tab" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
+              <button type="button" class="as-tab" data-as-tab="calendario" onclick="asSwitchTab('calendario')">Calendario</button>
+              <button type="button" class="as-tab" data-as-tab="tareas" onclick="asSwitchTab('tareas')">Tareas</button>
+              <button type="button" class="as-tab" data-as-tab="extra" onclick="asSwitchTab('extra')">Tiempo extra</button>
+              <button type="button" class="as-tab" data-as-tab="nomina" onclick="asSwitchTab('nomina')">Nómina</button>
+              <button type="button" class="as-tab" data-as-tab="peticiones" onclick="asSwitchTab('peticiones')">Peticiones</button>
               <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
               <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
               <button type="button" class="as-tab" data-as-tab="gastos" onclick="asSwitchTab('gastos')">Gastos</button>
@@ -626,7 +714,7 @@
               </select>
             </div>
             <div style="margin:.5rem 0 1rem">
-              <button type="button" class="btn btn-outline" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
+              <button type="button" class="btn btn-outline" id="asCsvBtn" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
             </div>
             <div id="asAdminList" class="as-list"></div>
           </div>
@@ -662,6 +750,16 @@
             </select>
             <button class="btn btn-primary btn-sm" onclick="addAsistenciaUser()">Agregar</button>
           </div>
+        </div>
+
+        <div class="settings-card admin-only">
+          <h3>Ajustes de Asistencia</h3>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">Hora esperada para puntualidad (por defecto 9:00). Tarifa MXN/hora solo para el resumen de nómina; déjala vacía si no aplica.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Entrada esperada</label><input type="time" id="cfgAsExpectedStart" value="09:00"></div>
+            <div class="form-group"><label>MXN / hora (opcional)</label><input type="number" id="cfgAsHourly" min="0" step="1" placeholder="vacío"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:.75rem" onclick="saveAsistenciaCfg()">Guardar ajustes</button>
         </div>
 
         <div class="settings-card admin-only">
@@ -850,6 +948,7 @@
     <div class="modal-header"><h3>Registrar cliente</h3><button class="modal-close" onclick="closeModal('asClientModal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
+        <input type="hidden" id="asCfEditId">
         <div class="form-group full"><label>Huésped *</label><input type="text" id="asCfHuesped" placeholder="Nombre completo"></div>
         <div class="form-group"><label>Departamento *</label>
           <select id="asCfDepto" onchange="asCfDeptoChange()">
@@ -891,6 +990,7 @@
     <div class="modal-header"><h3>Registrar gasto</h3><button class="modal-close" onclick="closeModal('asExpenseModal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
+        <input type="hidden" id="asEfEditId">
         <div class="form-group full"><label>Concepto *</label><input type="text" id="asEfConcepto" placeholder="Ej. Blanqueador, gas, Uber…"></div>
         <div class="form-group"><label>Monto MXN *</label><input type="number" id="asEfMonto" min="0" step="0.01"></div>
         <div class="form-group"><label>Categoría</label>
@@ -920,11 +1020,62 @@
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><h3>¿Salir del turno?</h3><button class="modal-close" onclick="closeModal('asEndModal')">×</button></div>
     <div class="modal-body">
-      <p style="font-size:.9rem;color:var(--text-secondary)">Se guardará tu turno con la hora actual de entrada y salida. No podrás editar los tiempos después.</p>
+      <p style="font-size:.9rem;color:var(--text-secondary)">Se guardará tu turno con la hora actual de entrada y salida. Las pausas se descuentan. No podrás editar los tiempos después.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('asEndModal')">Regresar</button>
       <button class="btn btn-danger" onclick="asEndShift()">Sí, salir del turno</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="asShiftDetailModal">
+  <div class="modal">
+    <div class="modal-header"><h3>Detalle del turno</h3><button class="modal-close" onclick="closeModal('asShiftDetailModal')">×</button></div>
+    <div class="modal-body" id="asShiftDetailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asShiftDetailModal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="asPeticionModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="asPetTitle">Petición</h3><button class="modal-close" onclick="closeModal('asPeticionModal')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="asPetType" value="material">
+      <div class="form-grid">
+        <div class="form-group full"><label>Asunto corto *</label><input type="text" id="asPetSubject" placeholder="¿De qué se trata?"></div>
+        <div class="form-group full"><label>Detalle *</label><textarea id="asPetDetail" rows="3" placeholder="Explica con detalle"></textarea></div>
+        <div class="form-group" id="asPetUrgWrap"><label>Urgencia</label>
+          <select id="asPetUrg"><option>Normal</option><option>Hoy</option><option>Urgente</option></select>
+        </div>
+        <div class="form-group full"><label>Foto (opcional)</label>
+          <input type="file" id="asPetFoto" accept="image/*" capture="environment" onchange="asHandlePetPhoto(this)">
+          <img id="asPetPrev" class="as-thumb" style="display:none" alt="">
+          <input type="hidden" id="asPetFotoData">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asPeticionModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="asSavePeticion()">Enviar a Koke</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="asAssignTaskModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>Asignar tarea a Valeria</h3><button class="modal-close" onclick="closeModal('asAssignTaskModal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group"><label>Tarea *</label><input type="text" id="asTkText" placeholder="Qué debe hacer"></div>
+        <div class="form-group"><label>Fecha límite (opcional)</label><input type="date" id="asTkDue"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('asAssignTaskModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="asAssignTask()">Asignar</button>
     </div>
   </div>
 </div>
@@ -1003,7 +1154,11 @@ const STORAGE_KEYS = {
   asistenciaClients: 'bvg_asistencia_clients',
   asistenciaExpenses: 'bvg_asistencia_expenses',
   accesos: 'bvg_accesos',
-  asistenciaPins: 'bvg_asistencia_pins'
+  asistenciaPins: 'bvg_asistencia_pins',
+  asistenciaTasks: 'bvg_asistencia_tasks',
+  asistenciaPeticiones: 'bvg_asistencia_peticiones',
+  asistenciaOvertime: 'bvg_asistencia_overtime',
+  asistenciaCfg: 'bvg_asistencia_settings'
 };
 
 /* ============================================================
@@ -1022,7 +1177,9 @@ var SYNC_KEYS = [
   'bvg_bookings', 'bvg_expenses', 'bvg_tasks', 'bvg_settings',
   'bvg_receipts', 'bvg_receipt_counter', 'bvg_password',
   'bvg_shifts', 'bvg_asistencia_clients', 'bvg_asistencia_expenses',
-  'bvg_accesos', 'bvg_asistencia_pins'
+  'bvg_accesos', 'bvg_asistencia_pins',
+  'bvg_asistencia_tasks', 'bvg_asistencia_peticiones',
+  'bvg_asistencia_overtime', 'bvg_asistencia_settings'
 ];
 // Keys that stay LOCAL only (device-specific)
 // bvg_activity_log, bvg_devices, bvg_device_id, bvg_device_name, bvg_admin_mode
@@ -1660,13 +1817,20 @@ function toggleSidebar() {
 /* ============================================================
    ASISTENCIA / TURNOS — checador Valerie + panel Koke
    New Firebase keys only: bvg_shifts, bvg_asistencia_clients,
-   bvg_asistencia_expenses, bvg_accesos, bvg_asistencia_pins
-   Does not write bookings, rental expenses, receipts, tasks, settings.
+   bvg_asistencia_expenses, bvg_accesos, bvg_asistencia_pins,
+   bvg_asistencia_tasks, bvg_asistencia_peticiones,
+   bvg_asistencia_overtime, bvg_asistencia_settings
+   Does not write bookings, rental expenses, receipts, calendar tasks, settings.
    ============================================================ */
 var AS_DEPTO_RATES = { '1401 Sur': 6500, '1404 Norte': 5500, '1204 Norte': null };
-var AS_ADMIN_TAB = 'turnos';
+var AS_CLOCK_DEPTOS = ['1401 Sur', '1404 Norte', '1204 Norte'];
+var AS_DAY_CHIPS = ['Cliente', 'WhatsApp', 'Limpieza coord', 'Recados', 'Visita depto 1401', 'Visita depto 1404', 'Visita depto 1204', 'Otro'];
+var AS_ADMIN_TAB = 'resumen';
 var _asTimerInt = null;
 var _asJustEnded = null;
+var _asOtMinutes = 30;
+var _asDayPhotos = [];
+var _asCalMonth = null;
 
 function defaultAsistenciaUsers() {
   return [
@@ -1689,6 +1853,30 @@ function getAsistenciaClockExpenses() { return loadData(STORAGE_KEYS.asistenciaE
 function saveAsistenciaClockExpenses(list) { saveData(STORAGE_KEYS.asistenciaExpenses, list); }
 function getAsistenciaAccesos() { return loadData(STORAGE_KEYS.accesos) || []; }
 function saveAsistenciaAccesos(list) { saveData(STORAGE_KEYS.accesos, list); }
+function getAsistenciaTasks() { return loadData(STORAGE_KEYS.asistenciaTasks) || []; }
+function saveAsistenciaTasks(list) { saveData(STORAGE_KEYS.asistenciaTasks, list); }
+function getAsistenciaPeticiones() { return loadData(STORAGE_KEYS.asistenciaPeticiones) || []; }
+function saveAsistenciaPeticiones(list) { saveData(STORAGE_KEYS.asistenciaPeticiones, list); }
+function getAsistenciaOvertime() { return loadData(STORAGE_KEYS.asistenciaOvertime) || []; }
+function saveAsistenciaOvertime(list) { saveData(STORAGE_KEYS.asistenciaOvertime, list); }
+function getAsistenciaCfg() {
+  return loadData(STORAGE_KEYS.asistenciaCfg) || { expectedStart: '09:00', hourlyMxn: '' };
+}
+function saveAsistenciaCfg() {
+  if (adminGuard()) return;
+  var start = (document.getElementById('cfgAsExpectedStart').value || '09:00');
+  var rate = document.getElementById('cfgAsHourly').value;
+  saveData(STORAGE_KEYS.asistenciaCfg, { expectedStart: start, hourlyMxn: rate === '' ? '' : Number(rate) });
+  showToast('Ajustes de asistencia guardados', 'success');
+}
+function renderAsistenciaCfg() {
+  var boxS = document.getElementById('cfgAsExpectedStart');
+  var boxR = document.getElementById('cfgAsHourly');
+  if (!boxS) return;
+  var cfg = getAsistenciaCfg();
+  boxS.value = cfg.expectedStart || '09:00';
+  boxR.value = cfg.hourlyMxn === '' || cfg.hourlyMxn == null ? '' : cfg.hourlyMxn;
+}
 
 function asUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function asPad(n) { return String(n).padStart(2, '0'); }
@@ -1745,6 +1933,74 @@ function asUpsertById(list, rec) {
   if (i >= 0) list[i] = rec; else list.unshift(rec);
   return list;
 }
+function asRemoveById(list, id) {
+  return (list || []).filter(function(x) { return x && x.id !== id; });
+}
+function asLocalDateStr(ts) {
+  var d = ts ? new Date(ts) : new Date();
+  return d.getFullYear() + '-' + asPad(d.getMonth() + 1) + '-' + asPad(d.getDate());
+}
+function asWeekStart(d) {
+  var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var day = x.getDay();
+  var diff = day === 0 ? 6 : day - 1;
+  x.setDate(x.getDate() - diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function asQuincenaRange(d) {
+  var y = d.getFullYear(), m = d.getMonth();
+  if (d.getDate() <= 15) return { from: new Date(y, m, 1, 0, 0, 0, 0), to: new Date(y, m, 15, 23, 59, 59, 999), label: '1–15 ' + d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) };
+  var last = new Date(y, m + 1, 0).getDate();
+  return { from: new Date(y, m, 16, 0, 0, 0, 0), to: new Date(y, m, last, 23, 59, 59, 999), label: '16–' + last + ' ' + d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) };
+}
+function asPauses(s) { return (s && Array.isArray(s.pauses)) ? s.pauses : []; }
+function asIsPaused(s) {
+  var p = asPauses(s);
+  return p.length > 0 && !p[p.length - 1].endedAt;
+}
+function asCloseOpenPause(s, at) {
+  s.pauses = asPauses(s);
+  var last = s.pauses[s.pauses.length - 1];
+  if (last && !last.endedAt) last.endedAt = at || Date.now();
+}
+function asPauseMs(s, until) {
+  var endCap = until || Date.now();
+  return asPauses(s).reduce(function(sum, p) {
+    if (!p || !p.startedAt) return sum;
+    var pe = p.endedAt || endCap;
+    return sum + Math.max(0, pe - p.startedAt);
+  }, 0);
+}
+function asWorkedMs(s, until) {
+  if (!s || !s.startedAt) return 0;
+  var end = s.endedAt || until || Date.now();
+  return Math.max(0, end - s.startedAt - asPauseMs(s, end));
+}
+function asHasDayReport(s) {
+  return !!(s && s.dayReport && s.dayReport.savedAt && s.dayReport.chips && s.dayReport.chips.length);
+}
+function asWorkerUser() {
+  var users = getAsistenciaUsers();
+  return users.find(function(u) { return String(u.pin) === '2604'; }) ||
+    users.find(function(u) { return u.role === 'worker'; }) ||
+    { pin: '2604', name: 'Valeria Martínez-Calderón', short: 'Valeria', role: 'worker' };
+}
+function asShiftsForPin(pin) {
+  return getAsistenciaShifts().filter(function(s) { return s && String(s.userPin) === String(pin); });
+}
+function asExpectedMinutes() {
+  var t = (getAsistenciaCfg().expectedStart || '09:00').split(':');
+  return (Number(t[0]) || 9) * 60 + (Number(t[1]) || 0);
+}
+function asIsLate(s) {
+  if (!s || !s.startedAt) return false;
+  var d = new Date(s.startedAt);
+  return (d.getHours() * 60 + d.getMinutes()) > asExpectedMinutes();
+}
+function asPersistShift(s) {
+  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+}
 
 function asTryPin() {
   var input = document.getElementById('asPinInput');
@@ -1776,6 +2032,8 @@ function asLogoutPin() {
     }
   }
   asSetSession(null);
+  _asJustEnded = null;
+  _asDayPhotos = [];
   if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   renderAsistencia();
 }
@@ -1799,25 +2057,42 @@ function asStartShift() {
   if (asActiveShift()) { renderAsistencia(); showToast('Ya hay un turno abierto', 'info'); return; }
   var s = {
     id: asUid(), userPin: u.pin, userName: u.name, userShort: u.short,
-    startedAt: Date.now(), endedAt: null, events: []
+    startedAt: Date.now(), endedAt: null, events: [], pauses: [], note: '', dayReport: null
   };
   saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
   renderAsistencia();
   showToast('Turno iniciado', 'success');
 }
 
-function asConfirmEndShift() { openModal('asEndModal'); }
+function asConfirmEndShift() {
+  var s = asActiveShift();
+  if (!s) return;
+  if (!asHasDayReport(s)) {
+    showToast('Primero guarda tu reporte del día (¿Qué hiciste hoy?)', 'error');
+    var box = document.getElementById('asDayReport');
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  openModal('asEndModal');
+}
 
 function asEndShift() {
   var s = asActiveShift();
   if (!s) { closeModal('asEndModal'); return; }
+  if (!asHasDayReport(s)) {
+    closeModal('asEndModal');
+    showToast('Primero guarda tu reporte del día', 'error');
+    return;
+  }
+  asCloseOpenPause(s);
   s.endedAt = Date.now();
-  s.durationMs = s.endedAt - s.startedAt;
-  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  s.durationMs = asWorkedMs(s, s.endedAt);
+  asPersistShift(s);
   closeModal('asEndModal');
   if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   _asJustEnded = s;
   asShowSummary(s);
+  asRenderWorkerHome();
   if (asIsAdminView()) asRenderAdmin();
   showToast('Turno cerrado', 'success');
 }
@@ -1827,7 +2102,7 @@ function asShowSummary(s) {
   document.getElementById('asOnShift').style.display = 'none';
   document.getElementById('asSummary').style.display = '';
   var ev = asShiftEvents(s);
-  var hrs = (s.durationMs || 0) / 3600000;
+  var hrs = asWorkedMs(s, s.endedAt || Date.now()) / 3600000;
   var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
   var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
   document.getElementById('asSumHoras').textContent = hrs.toFixed(2) + 'h';
@@ -1840,6 +2115,7 @@ function asGoOffShift() {
   document.getElementById('asSummary').style.display = 'none';
   document.getElementById('asOnShift').style.display = 'none';
   document.getElementById('asOffShift').style.display = '';
+  asRenderWorkerHome();
   if (asIsAdminView()) asRenderAdmin();
 }
 
@@ -1848,6 +2124,10 @@ function asGoOnShift(s) {
   document.getElementById('asOffShift').style.display = 'none';
   document.getElementById('asOnShift').style.display = '';
   document.getElementById('asShiftStartStr').textContent = asFmtDateTime(s.startedAt);
+  var noteEl = document.getElementById('asShiftNote');
+  if (noteEl && document.activeElement !== noteEl) noteEl.value = s.note || '';
+  asRenderDayReportForm(s);
+  asUpdatePauseUi(s);
   asTickTimer();
   if (_asTimerInt) clearInterval(_asTimerInt);
   _asTimerInt = setInterval(asTickTimer, 1000);
@@ -1859,11 +2139,49 @@ function asTickTimer() {
   if (!s) return;
   var el = document.getElementById('asRunningTime');
   if (!el) return;
-  var ms = Date.now() - s.startedAt;
+  var ms = asWorkedMs(s, Date.now());
   var h = Math.floor(ms / 3600000);
   var m = Math.floor(ms / 60000) % 60;
   var sec = Math.floor(ms / 1000) % 60;
   el.textContent = asPad(h) + ':' + asPad(m) + ':' + asPad(sec);
+}
+
+function asUpdatePauseUi(s) {
+  s = s || asActiveShift();
+  var badge = document.getElementById('asShiftStateBadge');
+  var btn = document.getElementById('asPauseBtn');
+  var timeEl = document.getElementById('asRunningTime');
+  if (!s || !badge) return;
+  var paused = asIsPaused(s);
+  badge.textContent = paused ? '⏸ En pausa' : '● Turno activo';
+  badge.className = 'badge ' + (paused ? 'badge-orange' : 'badge-green');
+  if (btn) btn.textContent = paused ? '▶ Reanudar' : '⏸ Pausa / receso';
+  if (timeEl) timeEl.classList.toggle('as-paused', paused);
+}
+
+function asTogglePause() {
+  var s = asActiveShift();
+  if (!s) return;
+  s.pauses = asPauses(s);
+  if (asIsPaused(s)) {
+    asCloseOpenPause(s);
+    showToast('Turno reanudado', 'success');
+  } else {
+    s.pauses.push({ startedAt: Date.now(), endedAt: null });
+    showToast('En pausa — el cronómetro no corre', 'info');
+  }
+  asPersistShift(s);
+  asUpdatePauseUi(s);
+  asTickTimer();
+}
+
+function asSaveShiftNote() {
+  var s = asActiveShift();
+  if (!s) return;
+  var el = document.getElementById('asShiftNote');
+  s.note = el ? el.value.trim() : '';
+  asPersistShift(s);
+  showToast('Nota guardada', 'success', 1200);
 }
 
 function asRenderShiftEvents(s) {
@@ -1877,25 +2195,41 @@ function asRenderShiftEvents(s) {
   document.getElementById('asKpiEventos').textContent = ev.length;
   var container = document.getElementById('asShiftEvents');
   if (!ev.length) { container.innerHTML = '<div class="as-empty">Aún no registras nada.</div>'; return; }
+  var canFix = !s.endedAt;
   container.innerHTML = ev.slice().reverse().map(function(e) {
+    var actions = canFix ? '<div class="as-item-actions"><button type="button" class="btn btn-outline btn-sm" onclick="asEditShiftEvent(\'' + e.id + '\')">Editar</button><button type="button" class="btn btn-outline btn-sm" style="color:var(--red)" onclick="asDeleteShiftEvent(\'' + e.id + '\')">Borrar</button></div>' : '';
     if (e.type === 'client') {
       return '<div class="as-item"><div class="as-item-top"><b>Cliente · ' + esc(e.huesped || '—') + '</b><span class="badge badge-blue">' + esc(e.depto || '—') + '</span></div>' +
         '<small>' + esc(e.fuente || '—') + ' · ' + esc(e.checkIn || '?') + ' → ' + esc(e.checkOut || '?') + ' · ' + (e.total ? fmtMoney(e.total) : 'sin total') + ' · ' + asFmtDateTime(e.ts) + '</small>' +
-        (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + '</div>';
+        (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + actions + '</div>';
     }
     return '<div class="as-item"><div class="as-item-top"><b>Gasto · ' + esc(e.concepto || '—') + '</b><span class="badge badge-red">' + fmtMoney(e.monto) + '</span></div>' +
       '<small>' + esc(e.categoria || '—') + (e.depto ? ' · ' + esc(e.depto) : '') + ' · ' + asFmtDateTime(e.ts) + '</small>' +
-      (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + '</div>';
+      (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + actions + '</div>';
   }).join('');
 }
 
-function asOpenClient() {
+function asOpenClient(editId) {
   if (!asActiveShift()) { showToast('Primero entra al turno', 'info'); return; }
   ['asCfHuesped', 'asCfDepto', 'asCfIn', 'asCfOut', 'asCfFuente', 'asCfNoches', 'asCfTotal', 'asCfNotas'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  document.getElementById('asCfEditId').value = editId || '';
   var u = asCurrentUser();
   if (u) document.getElementById('asCfEncargado').value = u.short === 'Koke' ? 'Koke' : 'Valeria';
+  if (editId) {
+    var ev = asShiftEvents(asActiveShift()).find(function(e) { return e.id === editId && e.type === 'client'; });
+    if (!ev) { showToast('Solo puedes corregir registros de este turno', 'error'); return; }
+    document.getElementById('asCfHuesped').value = ev.huesped || '';
+    document.getElementById('asCfDepto').value = ev.depto || '';
+    document.getElementById('asCfIn').value = ev.checkIn || '';
+    document.getElementById('asCfOut').value = ev.checkOut || '';
+    document.getElementById('asCfFuente').value = ev.fuente || '';
+    document.getElementById('asCfEncargado').value = ev.encargado || document.getElementById('asCfEncargado').value;
+    document.getElementById('asCfNoches').value = ev.noches || '';
+    document.getElementById('asCfTotal').value = ev.total || '';
+    document.getElementById('asCfNotas').value = ev.notas || '';
+  }
   openModal('asClientModal');
 }
 function asCfDeptoChange() {
@@ -1924,29 +2258,46 @@ function asSaveClient() {
   if (!huesped) { showToast('Falta el nombre del huésped', 'error'); return; }
   if (!depto) { showToast('Falta el depto', 'error'); return; }
   if (!fuente) { showToast('Falta la fuente', 'error'); return; }
+  var editId = document.getElementById('asCfEditId').value;
   var rec = {
-    id: asUid(), type: 'client', ts: Date.now(), shiftId: s.id,
+    id: editId || asUid(), type: 'client', ts: Date.now(), shiftId: s.id,
     userPin: u.pin, userName: u.name, userShort: u.short,
     huesped: huesped, depto: depto, checkIn: checkIn, checkOut: checkOut,
     noches: noches, total: total, fuente: fuente, encargado: encargado, notas: notas
   };
+  if (editId) {
+    var prev = asShiftEvents(s).find(function(e) { return e.id === editId; });
+    if (!prev || prev.type !== 'client') { showToast('Solo este turno', 'error'); return; }
+    rec.ts = prev.ts;
+  }
   s.events = asShiftEvents(s);
-  s.events.push(rec);
-  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  if (editId) s.events = s.events.map(function(e) { return e.id === editId ? rec : e; });
+  else s.events.push(rec);
+  asPersistShift(s);
   saveAsistenciaClients(asUpsertById(getAsistenciaClients(), rec));
   closeModal('asClientModal');
   asRenderShiftEvents(s);
   if (asIsAdminView()) asRenderAdmin();
-  showToast('Cliente guardado', 'success');
+  showToast(editId ? 'Cliente actualizado' : 'Cliente guardado', 'success');
 }
 
-function asOpenExpense() {
+function asOpenExpense(editId) {
   if (!asActiveShift()) { showToast('Primero entra al turno', 'info'); return; }
   ['asEfConcepto', 'asEfMonto', 'asEfNotas'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  document.getElementById('asEfEditId').value = editId || '';
   document.getElementById('asEfCategoria').value = 'Limpieza';
   document.getElementById('asEfDepto').value = '';
+  if (editId) {
+    var ev = asShiftEvents(asActiveShift()).find(function(e) { return e.id === editId && e.type === 'expense'; });
+    if (!ev) { showToast('Solo puedes corregir registros de este turno', 'error'); return; }
+    document.getElementById('asEfConcepto').value = ev.concepto || '';
+    document.getElementById('asEfMonto').value = ev.monto || '';
+    document.getElementById('asEfCategoria').value = ev.categoria || 'Limpieza';
+    document.getElementById('asEfDepto').value = ev.depto || '';
+    document.getElementById('asEfNotas').value = ev.notas || '';
+  }
   openModal('asExpenseModal');
 }
 function asSaveExpense() {
@@ -1959,19 +2310,49 @@ function asSaveExpense() {
   var notas = document.getElementById('asEfNotas').value.trim();
   if (!concepto) { showToast('Falta el concepto', 'error'); return; }
   if (!monto || monto <= 0) { showToast('Monto inválido', 'error'); return; }
+  var editId = document.getElementById('asEfEditId').value;
   var rec = {
-    id: asUid(), type: 'expense', ts: Date.now(), shiftId: s.id,
+    id: editId || asUid(), type: 'expense', ts: Date.now(), shiftId: s.id,
     userPin: u.pin, userName: u.name, userShort: u.short,
     concepto: concepto, monto: monto, categoria: categoria, depto: depto, notas: notas
   };
+  if (editId) {
+    var prev = asShiftEvents(s).find(function(e) { return e.id === editId; });
+    if (!prev || prev.type !== 'expense') { showToast('Solo este turno', 'error'); return; }
+    rec.ts = prev.ts;
+  }
   s.events = asShiftEvents(s);
-  s.events.push(rec);
-  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  if (editId) s.events = s.events.map(function(e) { return e.id === editId ? rec : e; });
+  else s.events.push(rec);
+  asPersistShift(s);
   saveAsistenciaClockExpenses(asUpsertById(getAsistenciaClockExpenses(), rec));
   closeModal('asExpenseModal');
   asRenderShiftEvents(s);
   if (asIsAdminView()) asRenderAdmin();
-  showToast('Gasto guardado', 'success');
+  showToast(editId ? 'Gasto actualizado' : 'Gasto guardado', 'success');
+}
+
+function asEditShiftEvent(id) {
+  var s = asActiveShift();
+  if (!s) return;
+  var ev = asShiftEvents(s).find(function(e) { return e.id === id; });
+  if (!ev) { showToast('Solo este turno', 'error'); return; }
+  if (ev.type === 'client') asOpenClient(id);
+  else asOpenExpense(id);
+}
+function asDeleteShiftEvent(id) {
+  var s = asActiveShift();
+  if (!s) return;
+  var ev = asShiftEvents(s).find(function(e) { return e.id === id; });
+  if (!ev) { showToast('Solo este turno', 'error'); return; }
+  if (!confirm('¿Borrar este registro de ESTE turno?')) return;
+  s.events = asShiftEvents(s).filter(function(e) { return e.id !== id; });
+  asPersistShift(s);
+  if (ev.type === 'client') saveAsistenciaClients(asRemoveById(getAsistenciaClients(), id));
+  else saveAsistenciaClockExpenses(asRemoveById(getAsistenciaClockExpenses(), id));
+  asRenderShiftEvents(s);
+  if (asIsAdminView()) asRenderAdmin();
+  showToast('Registro borrado', 'info');
 }
 
 function asSwitchTab(t) {
@@ -1979,7 +2360,12 @@ function asSwitchTab(t) {
   document.querySelectorAll('#asAdminTabs .as-tab').forEach(function(el) {
     el.classList.toggle('active', el.getAttribute('data-as-tab') === t);
   });
-  document.getElementById('asFltRow2').style.display = (t === 'clientes' || t === 'gastos') ? '' : 'none';
+  var filters = document.getElementById('asFltRow2');
+  var range = document.querySelector('#asAdmin .as-filterbar');
+  var csvBtn = document.querySelector('#asAdmin .btn.btn-outline');
+  if (filters) filters.style.display = (t === 'clientes' || t === 'gastos') ? '' : 'none';
+  if (range) range.style.display = (t === 'turnos' || t === 'accesos' || t === 'clientes' || t === 'gastos') ? '' : 'none';
+  if (csvBtn) csvBtn.style.display = (t === 'turnos' || t === 'accesos' || t === 'clientes' || t === 'gastos') ? '' : 'none';
   asRenderAdmin();
 }
 
@@ -2026,25 +2412,45 @@ function asRenderAdmin() {
   if (!asIsAdminView()) return;
   var list = document.getElementById('asAdminList');
   if (!list) return;
-  var rows = asFilteredAdminRows();
+  var t = AS_ADMIN_TAB;
+  var filters = document.getElementById('asFltRow2');
+  var range = document.getElementById('asFltFrom') && document.getElementById('asFltFrom').parentNode;
+  var csvBtn = document.getElementById('asCsvBtn');
+  if (filters) filters.style.display = (t === 'clientes' || t === 'gastos') ? '' : 'none';
+  if (range) range.style.display = (t === 'turnos' || t === 'accesos' || t === 'clientes' || t === 'gastos') ? '' : 'none';
+  if (csvBtn) csvBtn.style.display = (t === 'turnos' || t === 'accesos' || t === 'clientes' || t === 'gastos') ? '' : 'none';
+  var rows = (t === 'turnos' || t === 'accesos' || t === 'clientes' || t === 'gastos') ? asFilteredAdminRows() : [];
+  if (AS_ADMIN_TAB === 'resumen') { asRenderAdminResumen(list); return; }
+  if (AS_ADMIN_TAB === 'calendario') { asRenderAdminCal(list); return; }
+  if (AS_ADMIN_TAB === 'tareas') { asRenderAdminTareas(list); return; }
+  if (AS_ADMIN_TAB === 'extra') { asRenderAdminExtra(list); return; }
+  if (AS_ADMIN_TAB === 'nomina') { asRenderAdminNomina(list); return; }
+  if (AS_ADMIN_TAB === 'peticiones') { asRenderAdminPets(list); return; }
   if (AS_ADMIN_TAB === 'turnos') {
     if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin turnos en este rango.</div>'; return; }
     list.innerHTML = rows.map(function(s) {
       var open = !s.endedAt;
-      var hrsMs = (s.endedAt || Date.now()) - s.startedAt;
+      var paused = asIsPaused(s);
+      var hrsMs = asWorkedMs(s, s.endedAt || Date.now());
       var ev = asShiftEvents(s);
       var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
       var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
       var numGastos = ev.filter(function(e) { return e && e.type === 'expense'; }).length;
-      return '<div class="as-item"><div class="as-item-top"><b>' + esc(s.userShort || s.userName || '—') + '</b><span class="badge ' + (open ? 'badge-orange' : 'badge-green') + '">' + (open ? '● en curso' : asFmtDur(hrsMs)) + '</span></div>' +
+      var pauseN = asPauses(s).length;
+      var st = open ? (paused ? '⏸ pausa' : '● en curso') : asFmtDur(hrsMs);
+      return '<div class="as-item" onclick="asOpenShiftDetail(\'' + s.id + '\',true)" style="cursor:pointer"><div class="as-item-top"><b>' + esc(s.userShort || s.userName || '—') + '</b><span class="badge ' + (open ? 'badge-orange' : 'badge-green') + '">' + st + '</span></div>' +
         '<div class="as-grid2">' +
         '<small><b>Fecha:</b> ' + asFmtDate(s.startedAt) + '</small>' +
-        '<small><b>Duración:</b> ' + (open ? '—' : asFmtDur(hrsMs)) + '</small>' +
+        '<small><b>Duración:</b> ' + (open && !s.endedAt ? asFmtDur(hrsMs) + ' (en curso)' : asFmtDur(hrsMs)) + ' <i>sin pausas</i></small>' +
         '<small><b>Entrar:</b> ' + asFmtDateTime(s.startedAt) + '</small>' +
         '<small><b>Salir:</b> ' + (s.endedAt ? asFmtDateTime(s.endedAt) : '—') + '</small>' +
         '<small><b>Clientes:</b> ' + clientes + '</small>' +
         '<small><b>Gastos:</b> ' + numGastos + ' · ' + fmtMoney(gastos) + '</small>' +
-        '</div></div>';
+        '</div>' +
+        (pauseN ? '<small>Pausas: ' + pauseN + ' · ' + asFmtDur(asPauseMs(s, s.endedAt || Date.now())) + '</small>' : '') +
+        (s.note ? '<small><b>Nota:</b> ' + esc(s.note) + '</small>' : '') +
+        (asHasDayReport(s) ? '<small><b>Hoy:</b> ' + esc((s.dayReport.chips || []).join(', ')) + '</small>' : '') +
+        '</div>';
     }).join('');
   } else if (AS_ADMIN_TAB === 'accesos') {
     if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin accesos en este rango.</div>'; return; }
@@ -2086,16 +2492,18 @@ function exportAsistenciaCSV() {
   var rows = asFilteredAdminRows();
   var headers = [], mapped = [], name = '';
   if (AS_ADMIN_TAB === 'turnos') {
-    headers = ['fecha', 'trabajador', 'entrar', 'salir', 'duracion_horas', 'estado', 'clientes', 'gastos_num', 'gastos_mxn', 'shift_id'];
+    headers = ['fecha', 'trabajador', 'entrar', 'salir', 'duracion_horas', 'pausa_horas', 'estado', 'clientes', 'gastos_num', 'gastos_mxn', 'nota', 'reporte', 'shift_id'];
     mapped = rows.map(function(s) {
       var open = !s.endedAt;
-      var hrs = ((s.endedAt || Date.now()) - s.startedAt) / 3600000;
+      var hrs = asWorkedMs(s, s.endedAt || Date.now()) / 3600000;
       var ev = asShiftEvents(s);
       var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
       var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
       var numGastos = ev.filter(function(e) { return e && e.type === 'expense'; }).length;
       return [asFmtDate(s.startedAt), s.userShort || s.userName || '', asFmtDateTime(s.startedAt), s.endedAt ? asFmtDateTime(s.endedAt) : '',
-        open ? '' : hrs.toFixed(2), open ? 'en_curso' : 'cerrado', clientes, numGastos, gastos, s.id];
+        open ? hrs.toFixed(2) : hrs.toFixed(2), (asPauseMs(s, s.endedAt || Date.now()) / 3600000).toFixed(2),
+        open ? (asIsPaused(s) ? 'pausa' : 'en_curso') : 'cerrado', clientes, numGastos, gastos, s.note || '',
+        asHasDayReport(s) ? (s.dayReport.chips || []).join('|') : '', s.id];
     });
     name = 'bvg_turnos.csv';
   } else if (AS_ADMIN_TAB === 'accesos') {
@@ -2155,6 +2563,7 @@ function renderAsistencia() {
     desk.style.display = 'none';
     if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   }
+  if (u) asRenderWorkerHome();
   admin.style.display = asIsAdminView() ? '' : 'none';
   if (asIsAdminView()) asRenderAdmin();
   var pinInput = document.getElementById('asPinInput');
@@ -2224,6 +2633,479 @@ function removeAsistenciaUser(i) {
   saveAsistenciaUsers(users);
   renderAsistenciaPins();
   showToast('Usuario eliminado', 'info');
+}
+
+function asHoursLabel(ms) {
+  return (Math.max(0, ms) / 3600000).toFixed(2) + 'h';
+}
+function asMyClosedShifts() {
+  var u = asCurrentUser();
+  if (!u) return [];
+  return asShiftsForPin(u.pin).filter(function(s) { return s.endedAt; })
+    .sort(function(a, b) { return (b.endedAt || 0) - (a.endedAt || 0); });
+}
+function asShiftsInRange(pin, from, to) {
+  return asShiftsForPin(pin).filter(function(s) {
+    if (!s || !s.startedAt) return false;
+    var t = s.startedAt;
+    return t >= from.getTime() && t <= to.getTime();
+  });
+}
+function asRenderWorkerHome() {
+  var u = asCurrentUser();
+  if (!u) return;
+  var now = new Date();
+  var today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  var today1 = today0 + 86400000 - 1;
+  var week0 = asWeekStart(now);
+  var todayMs = asShiftsInRange(u.pin, new Date(today0), new Date(today1)).reduce(function(a, s) { return a + asWorkedMs(s); }, 0);
+  var weekMs = asShiftsInRange(u.pin, week0, now).reduce(function(a, s) { return a + asWorkedMs(s); }, 0);
+  var last = asMyClosedShifts();
+  var elT = document.getElementById('asMyHoursToday');
+  if (elT) elT.textContent = asHoursLabel(todayMs);
+  var elW = document.getElementById('asMyHoursWeek');
+  if (elW) elW.textContent = asHoursLabel(weekMs);
+  var elN = document.getElementById('asMyLastN');
+  if (elN) elN.textContent = last.length;
+  var box = document.getElementById('asMyLastShifts');
+  if (box) {
+    var five = last.slice(0, 5);
+    box.innerHTML = five.length ? five.map(function(s) {
+      var ev = asShiftEvents(s);
+      var nC = ev.filter(function(e) { return e.type === 'client'; }).length;
+      var g = ev.filter(function(e) { return e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
+      return '<div class="as-item" style="cursor:pointer" onclick="asOpenShiftDetail(\'' + s.id + '\',false)">' +
+        '<div class="as-item-top"><b>' + asFmtDate(s.startedAt) + '</b><span class="badge badge-green">' + asFmtDur(asWorkedMs(s)) + '</span></div>' +
+        '<small>Entrar ' + asFmtDateTime(s.startedAt) + ' · Salir ' + asFmtDateTime(s.endedAt) + '</small>' +
+        '<small>' + nC + ' clientes · ' + fmtMoney(g) + ' gastos' + (s.note ? ' · ' + esc(s.note) : '') + '</small></div>';
+    }).join('') : '<div class="as-empty">Aún no tienes turnos cerrados.</div>';
+  }
+  asRenderQuincena(u.pin);
+  asRenderTodayStays();
+  asRenderMyTasks();
+  asRenderMyPets();
+  asRenderMyOt();
+  asUpdateWorkerBadges();
+}
+function asRenderQuincena(pin) {
+  var q = asQuincenaRange(new Date());
+  var rows = asShiftsInRange(pin, q.from, q.to);
+  var days = {};
+  var ms = 0, onTime = 0, late = 0;
+  rows.forEach(function(s) {
+    days[asLocalDateStr(s.startedAt)] = true;
+    ms += asWorkedMs(s);
+    if (asIsLate(s)) late++; else onTime++;
+  });
+  var lab = document.getElementById('asQLabel');
+  if (lab) lab.textContent = q.label + ' · entrada esperada ' + (getAsistenciaCfg().expectedStart || '09:00');
+  var dEl = document.getElementById('asQDays'); if (dEl) dEl.textContent = Object.keys(days).length;
+  var hEl = document.getElementById('asQHours'); if (hEl) hEl.textContent = asHoursLabel(ms);
+  var pEl = document.getElementById('asQPunct');
+  if (pEl) pEl.textContent = rows.length ? (onTime + ' a tiempo / ' + late + ' tarde') : '—';
+}
+function asDeptoMatch(depto) {
+  var d = (depto || '').toLowerCase();
+  if (d.indexOf('1401') >= 0 || d.indexOf('sur') >= 0 && d.indexOf('1401') >= 0) return '1401 Sur';
+  if (d.indexOf('1404') >= 0) return '1404 Norte';
+  if (d.indexOf('1204') >= 0) return '1204 Norte';
+  if (AS_CLOCK_DEPTOS.indexOf(depto) >= 0) return depto;
+  return null;
+}
+function asRenderTodayStays() {
+  var box = document.getElementById('asTodayStays');
+  if (!box) return;
+  var today = asLocalDateStr(Date.now());
+  var ins = [], outs = [];
+  getBookings().forEach(function(b) {
+    if (!b) return;
+    var depto = asDeptoMatch(b.depto);
+    if (!depto) return;
+    if (b.entrada === today) ins.push({ b: b, depto: depto });
+    if (b.salida === today) outs.push({ b: b, depto: depto });
+  });
+  if (!ins.length && !outs.length) { box.innerHTML = '<div class="as-empty">Nada entra ni sale hoy en 1401 / 1404 / 1204.</div>'; return; }
+  box.innerHTML = ins.map(function(x) {
+    return '<div class="as-item"><div class="as-item-top"><b>Check-in · ' + esc(x.b.rent || '—') + '</b><span class="badge badge-green">' + esc(x.depto) + '</span></div><small>Solo lectura · ' + esc(x.b.fuente || '') + '</small></div>';
+  }).join('') + outs.map(function(x) {
+    return '<div class="as-item"><div class="as-item-top"><b>Check-out · ' + esc(x.b.rent || '—') + '</b><span class="badge badge-orange">' + esc(x.depto) + '</span></div><small>Solo lectura · ' + esc(x.b.fuente || '') + '</small></div>';
+  }).join('');
+}
+function asShowWorkerPanel(name) {
+  ['tareas', 'peticiones', 'extra'].forEach(function(n) {
+    var el = document.getElementById('asPanel' + n.charAt(0).toUpperCase() + n.slice(1));
+    if (!el) return;
+    el.style.display = (n === name && el.style.display === 'none') || (n === name && el.style.display === '') ? '' : (n === name ? '' : 'none');
+    if (n === name) el.style.display = '';
+  });
+  ['tareas', 'peticiones', 'extra'].forEach(function(n) {
+    var el = document.getElementById('asPanel' + (n === 'tareas' ? 'Tareas' : n === 'peticiones' ? 'Peticiones' : 'Extra'));
+    if (el && n !== name) el.style.display = 'none';
+  });
+  var map = { tareas: 'asPanelTareas', peticiones: 'asPanelPeticiones', extra: 'asPanelExtra' };
+  var panel = document.getElementById(map[name]);
+  if (panel) {
+    panel.style.display = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (name === 'extra') {
+    var d = document.getElementById('asOtDate');
+    if (d && !d.value) d.value = asLocalDateStr(Date.now());
+    asOtStep(0);
+  }
+}
+function asUpdateWorkerBadges() {
+  var u = asCurrentUser();
+  if (!u) return;
+  var tasks = getAsistenciaTasks().filter(function(t) { return t && t.status !== 'done' && String(t.assignedToPin) === String(u.pin); });
+  var pets = getAsistenciaPeticiones().filter(function(p) { return p && String(p.userPin) === String(u.pin) && p.status === 'pending'; });
+  var ot = getAsistenciaOvertime().filter(function(o) { return o && String(o.userPin) === String(u.pin) && o.status === 'pending'; });
+  var tb = document.getElementById('asTaskBadge'); if (tb) tb.textContent = tasks.length;
+  var pb = document.getElementById('asPetBadge'); if (pb) pb.textContent = pets.length;
+  var ob = document.getElementById('asOtBadge'); if (ob) ob.textContent = ot.length;
+}
+
+function asCompressImage(file, maxDim, quality) {
+  return new Promise(function(resolve, reject) {
+    var r = new FileReader();
+    r.onload = function() {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        var sc = Math.min(1, maxDim / Math.max(w, h));
+        w = Math.round(w * sc); h = Math.round(h * sc);
+        var c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = r.result;
+    };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+function asRenderDayReportForm(s) {
+  var wrap = document.getElementById('asDayChips');
+  if (!wrap) return;
+  var selected = (s.dayReport && s.dayReport.chips) ? s.dayReport.chips.slice() : [];
+  wrap.innerHTML = AS_DAY_CHIPS.map(function(ch) {
+    var on = selected.indexOf(ch) >= 0;
+    return '<button type="button" class="as-chip' + (on ? ' active' : '') + '" data-chip="' + esc(ch) + '" onclick="asToggleDayChip(this)">' + esc(ch) + '</button>';
+  }).join('');
+  var tx = document.getElementById('asDayText');
+  if (tx && document.activeElement !== tx) tx.value = (s.dayReport && s.dayReport.text) || '';
+  _asDayPhotos = (s.dayReport && s.dayReport.photos) ? s.dayReport.photos.slice() : [];
+  asRenderDayThumbs();
+  asUpdateSalirHint(s);
+}
+function asToggleDayChip(btn) {
+  btn.classList.toggle('active');
+}
+function asSelectedDayChips() {
+  return Array.prototype.map.call(document.querySelectorAll('#asDayChips .as-chip.active'), function(b) { return b.getAttribute('data-chip'); });
+}
+function asRenderDayThumbs() {
+  var box = document.getElementById('asDayThumbs');
+  if (!box) return;
+  box.innerHTML = _asDayPhotos.map(function(src, i) {
+    return '<div class="as-thumb-wrap"><img src="' + src + '" alt=""><button type="button" onclick="asRemoveDayPhoto(' + i + ')">×</button></div>';
+  }).join('');
+}
+function asRemoveDayPhoto(i) { _asDayPhotos.splice(i, 1); asRenderDayThumbs(); }
+function asHandleDayPhoto(input) {
+  var f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  if (_asDayPhotos.length >= 4) { showToast('Máximo 4 fotos', 'info'); return; }
+  asCompressImage(f, 800, 0.62).then(function(url) {
+    _asDayPhotos.push(url);
+    asRenderDayThumbs();
+  }).catch(function() { showToast('No se pudo leer la foto', 'error'); });
+}
+function asSaveDayReport() {
+  var s = asActiveShift();
+  if (!s) return;
+  var chips = asSelectedDayChips();
+  if (!chips.length) { showToast('Elige al menos una actividad', 'error'); return; }
+  s.dayReport = {
+    chips: chips,
+    text: (document.getElementById('asDayText').value || '').trim(),
+    photos: _asDayPhotos.slice(),
+    savedAt: Date.now()
+  };
+  asPersistShift(s);
+  asUpdateSalirHint(s);
+  showToast('Reporte del día guardado', 'success');
+}
+function asUpdateSalirHint(s) {
+  var ok = asHasDayReport(s);
+  var hint = document.getElementById('asDayReportOk');
+  var hint2 = document.getElementById('asSalirHint');
+  if (hint) hint.style.display = ok ? '' : 'none';
+  if (hint2) hint2.style.display = ok ? 'none' : '';
+}
+
+function asOpenShiftDetail(id, adminOk) {
+  var u = asCurrentUser();
+  var s = getAsistenciaShifts().find(function(x) { return x && x.id === id; });
+  if (!s) return;
+  if (!adminOk && (!u || String(s.userPin) !== String(u.pin))) { showToast('Ese turno no es tuyo', 'error'); return; }
+  if (adminOk && !asIsAdminView()) return;
+  var ev = asShiftEvents(s);
+  var body = document.getElementById('asShiftDetailBody');
+  var evHtml = ev.length ? ev.map(function(e) {
+    if (e.type === 'client') return '<div class="as-item"><b>Cliente · ' + esc(e.huesped || '—') + '</b><small>' + esc(e.depto) + ' · ' + esc(e.fuente) + '</small></div>';
+    return '<div class="as-item"><b>Gasto · ' + esc(e.concepto || '—') + '</b><small>' + fmtMoney(e.monto) + '</small></div>';
+  }).join('') : '<div class="as-empty">Sin registros.</div>';
+  body.innerHTML =
+    '<div class="as-grid2"><small><b>Entrar:</b> ' + asFmtDateTime(s.startedAt) + '</small><small><b>Salir:</b> ' + (s.endedAt ? asFmtDateTime(s.endedAt) : '—') + '</small>' +
+    '<small><b>Duración:</b> ' + asFmtDur(asWorkedMs(s)) + '</small><small><b>Pausas:</b> ' + asFmtDur(asPauseMs(s, s.endedAt || Date.now())) + '</small></div>' +
+    (s.note ? '<p class="as-muted" style="margin-top:.75rem"><b>Nota:</b> ' + esc(s.note) + '</p>' : '') +
+    (asHasDayReport(s) ? '<p class="as-muted"><b>Hoy:</b> ' + esc((s.dayReport.chips || []).join(', ')) + (s.dayReport.text ? ' — ' + esc(s.dayReport.text) : '') + '</p>' : '') +
+    (asHasDayReport(s) && s.dayReport.photos && s.dayReport.photos.length ? '<div class="as-thumbs">' + s.dayReport.photos.map(function(p) { return '<img src="' + p + '" class="as-thumb" alt="">'; }).join('') + '</div>' : '') +
+    '<h3 style="margin-top:1rem;font-size:.9rem">Actividad</h3>' + evHtml;
+  openModal('asShiftDetailModal');
+}
+
+function asRenderMyTasks() {
+  var box = document.getElementById('asMyTasks');
+  if (!box) return;
+  var u = asCurrentUser();
+  var rows = getAsistenciaTasks().filter(function(t) { return t && String(t.assignedToPin) === String(u.pin); })
+    .sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  if (!rows.length) { box.innerHTML = '<div class="as-empty">Sin tareas asignadas.</div>'; return; }
+  box.innerHTML = rows.map(function(t) {
+    var done = t.status === 'done';
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(t.text) + '</b><span class="badge ' + (done ? 'badge-green' : 'badge-orange') + '">' + (done ? 'hecha' : 'pendiente') + '</span></div>' +
+      (t.due ? '<small>Límite: ' + esc(t.due) + '</small>' : '') +
+      (!done ? '<button type="button" class="btn btn-success btn-sm" style="margin-top:.4rem" onclick="asMarkTaskDone(\'' + t.id + '\')">Marcar hecha</button>' : '') +
+      '</div>';
+  }).join('');
+}
+function asMarkTaskDone(id) {
+  var u = asCurrentUser();
+  var list = getAsistenciaTasks();
+  var t = list.find(function(x) { return x.id === id; });
+  if (!t || String(t.assignedToPin) !== String(u.pin)) return;
+  t.status = 'done'; t.doneAt = Date.now();
+  saveAsistenciaTasks(list);
+  asRenderMyTasks();
+  asUpdateWorkerBadges();
+  showToast('Tarea hecha', 'success');
+}
+function asAssignTask() {
+  if (!asIsAdminView()) return;
+  var text = (document.getElementById('asTkText').value || '').trim();
+  var due = document.getElementById('asTkDue').value;
+  if (!text) { showToast('Escribe la tarea', 'error'); return; }
+  var w = asWorkerUser();
+  var rec = { id: asUid(), text: text, due: due || '', status: 'pending', createdAt: Date.now(), doneAt: null, assignedToPin: w.pin, assignedToShort: w.short };
+  saveAsistenciaTasks(asUpsertById(getAsistenciaTasks(), rec));
+  document.getElementById('asTkText').value = '';
+  closeModal('asAssignTaskModal');
+  asRenderAdmin();
+  showToast('Tarea asignada a ' + w.short, 'success');
+}
+
+function asOpenPeticion(type) {
+  document.getElementById('asPetType').value = type;
+  document.getElementById('asPetTitle').textContent = type === 'duda' ? 'Duda o queja' : 'Pedir material';
+  document.getElementById('asPetSubject').value = '';
+  document.getElementById('asPetDetail').value = '';
+  document.getElementById('asPetUrg').value = 'Normal';
+  document.getElementById('asPetFotoData').value = '';
+  document.getElementById('asPetPrev').style.display = 'none';
+  document.getElementById('asPetUrgWrap').style.display = type === 'material' ? '' : 'none';
+  openModal('asPeticionModal');
+}
+function asHandlePetPhoto(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  asCompressImage(f, 800, 0.62).then(function(url) {
+    document.getElementById('asPetFotoData').value = url;
+    var img = document.getElementById('asPetPrev');
+    img.src = url; img.style.display = '';
+  }).catch(function() { showToast('No se pudo leer la foto', 'error'); });
+}
+function asSavePeticion() {
+  var u = asCurrentUser();
+  if (!u) return;
+  var subject = document.getElementById('asPetSubject').value.trim();
+  var detail = document.getElementById('asPetDetail').value.trim();
+  if (!subject || !detail) { showToast('Asunto y detalle son obligatorios', 'error'); return; }
+  var rec = {
+    id: asUid(), type: document.getElementById('asPetType').value, subject: subject, detail: detail,
+    urgency: document.getElementById('asPetUrg').value, photo: document.getElementById('asPetFotoData').value || null,
+    status: 'pending', userPin: u.pin, userShort: u.short, createdAt: Date.now()
+  };
+  saveAsistenciaPeticiones(asUpsertById(getAsistenciaPeticiones(), rec));
+  closeModal('asPeticionModal');
+  asShowWorkerPanel('peticiones');
+  asRenderMyPets();
+  asUpdateWorkerBadges();
+  showToast('Enviado a Koke', 'success');
+}
+function asRenderMyPets() {
+  var box = document.getElementById('asMyPets');
+  if (!box) return;
+  var u = asCurrentUser();
+  var rows = getAsistenciaPeticiones().filter(function(p) { return p && String(p.userPin) === String(u.pin); })
+    .sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  if (!rows.length) { box.innerHTML = '<div class="as-empty">Sin peticiones.</div>'; return; }
+  box.innerHTML = rows.map(function(p) {
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(p.type === 'duda' ? 'Duda' : 'Material') + ' · ' + esc(p.subject) + '</b><span class="badge ' + (p.status === 'done' ? 'badge-green' : p.status === 'seen' ? 'badge-blue' : 'badge-orange') + '">' + esc(p.status) + '</span></div>' +
+      '<small>' + esc(p.detail) + '</small><small>' + asFmtDateTime(p.createdAt) + '</small></div>';
+  }).join('');
+}
+function asOtStep(delta) {
+  _asOtMinutes = Math.max(30, (_asOtMinutes || 30) + delta);
+  var lbl = document.getElementById('asOtHoursLbl');
+  if (lbl) lbl.textContent = (_asOtMinutes / 60).toFixed(1) + ' h';
+}
+function asSubmitOvertime() {
+  var u = asCurrentUser();
+  if (!u) return;
+  var date = document.getElementById('asOtDate').value;
+  var reason = (document.getElementById('asOtReason').value || '').trim();
+  if (!date) { showToast('Elige el día', 'error'); return; }
+  if (!reason) { showToast('Escribe el motivo', 'error'); return; }
+  var rec = { id: asUid(), date: date, minutes: _asOtMinutes, reason: reason, status: 'pending', userPin: u.pin, userShort: u.short, createdAt: Date.now() };
+  saveAsistenciaOvertime(asUpsertById(getAsistenciaOvertime(), rec));
+  document.getElementById('asOtReason').value = '';
+  asRenderMyOt();
+  asUpdateWorkerBadges();
+  showToast('Tiempo extra enviado. Espera aprobación.', 'success');
+}
+function asRenderMyOt() {
+  var box = document.getElementById('asMyOt');
+  if (!box) return;
+  var u = asCurrentUser();
+  var rows = getAsistenciaOvertime().filter(function(o) { return o && String(o.userPin) === String(u.pin); })
+    .sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  if (!rows.length) { box.innerHTML = '<div class="as-empty">Sin reportes de tiempo extra.</div>'; return; }
+  box.innerHTML = rows.map(function(o) {
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(o.date) + ' · ' + (o.minutes / 60).toFixed(1) + ' h</b><span class="badge ' + (o.status === 'approved' ? 'badge-green' : o.status === 'rejected' ? 'badge-red' : 'badge-orange') + '">' + esc(o.status) + '</span></div><small>' + esc(o.reason) + '</small></div>';
+  }).join('');
+}
+
+function asValerieOpenShift() {
+  var pin = asWorkerUser().pin;
+  var open = asShiftsForPin(pin).filter(function(s) { return s && !s.endedAt; });
+  open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
+  return open[0] || null;
+}
+function asRenderAdminResumen(list) {
+  var w = asWorkerUser();
+  var s = asValerieOpenShift();
+  var today0 = new Date(); today0.setHours(0, 0, 0, 0);
+  var today1 = new Date(); today1.setHours(23, 59, 59, 999);
+  var todayMs = asShiftsInRange(w.pin, today0, today1).reduce(function(a, x) { return a + asWorkedMs(x); }, 0);
+  var status = 'AFUERA';
+  var badge = 'badge-blue';
+  if (s && asIsPaused(s)) { status = 'PAUSA'; badge = 'badge-orange'; }
+  else if (s) { status = 'EN TURNO'; badge = 'badge-green'; }
+  list.innerHTML = '<div class="as-item"><div class="as-item-top"><b>' + esc(w.short || 'Valeria') + '</b><span class="badge ' + badge + '">' + status + '</span></div>' +
+    '<div class="as-grid2"><small><b>Entrada:</b> ' + (s ? asFmtDateTime(s.startedAt) : '—') + '</small>' +
+    '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small></div>' +
+    (s && s.note ? '<small><b>Nota:</b> ' + esc(s.note) + '</small>' : '') + '</div>';
+}
+function asRenderAdminCal(list) {
+  var now = _asCalMonth ? new Date(_asCalMonth) : new Date();
+  var y = now.getFullYear(), m = now.getMonth();
+  var first = new Date(y, m, 1);
+  var last = new Date(y, m + 1, 0).getDate();
+  var startPad = (first.getDay() + 6) % 7;
+  var pin = asWorkerUser().pin;
+  var worked = {};
+  asShiftsForPin(pin).forEach(function(s) {
+    if (!s || !s.startedAt) return;
+    var d = new Date(s.startedAt);
+    if (d.getFullYear() === y && d.getMonth() === m) worked[d.getDate()] = true;
+  });
+  var cells = '';
+  for (var i = 0; i < startPad; i++) cells += '<div class="as-cal-cell empty"></div>';
+  for (var day = 1; day <= last; day++) {
+    cells += '<div class="as-cal-cell' + (worked[day] ? ' worked' : '') + '">' + day + (worked[day] ? '<span class="as-cal-dot"></span>' : '') + '</div>';
+  }
+  list.innerHTML = '<div class="as-cal-nav"><button type="button" class="btn btn-outline btn-sm" onclick="asCalNav(-1)">‹</button><b>' +
+    first.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) + '</b><button type="button" class="btn btn-outline btn-sm" onclick="asCalNav(1)">›</button></div>' +
+    '<div class="as-cal-week"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>' +
+    '<div class="as-cal-grid">' + cells + '</div>';
+}
+function asCalNav(delta) {
+  var now = _asCalMonth ? new Date(_asCalMonth) : new Date();
+  now.setMonth(now.getMonth() + delta);
+  _asCalMonth = now.getTime();
+  asRenderAdmin();
+}
+function asRenderAdminTareas(list) {
+  var rows = getAsistenciaTasks().slice().sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  var pending = rows.filter(function(t) { return t.status !== 'done'; }).length;
+  list.innerHTML = '<button type="button" class="btn btn-primary as-full-btn" style="margin-bottom:.75rem" onclick="openModal(\'asAssignTaskModal\')">＋ Asignar tarea a Valeria</button>' +
+    (rows.length ? rows.map(function(t) {
+      return '<div class="as-item"><div class="as-item-top"><b>' + esc(t.text) + '</b><span class="badge ' + (t.status === 'done' ? 'badge-green' : 'badge-orange') + '">' + (t.status === 'done' ? 'hecha' : 'pendiente') + '</span></div>' +
+        '<small>' + esc(t.assignedToShort || 'Valeria') + (t.due ? ' · límite ' + esc(t.due) : '') + '</small></div>';
+    }).join('') : '<div class="as-empty">Sin tareas. ' + pending + ' pendientes.</div>');
+}
+function asRenderAdminExtra(list) {
+  var rows = getAsistenciaOvertime().slice().sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin tiempo extra reportado.</div>'; return; }
+  list.innerHTML = rows.map(function(o) {
+    var acts = o.status === 'pending' ? '<div class="as-item-actions"><button type="button" class="btn btn-success btn-sm" onclick="asSetOvertime(\'' + o.id + '\',\'approved\')">Aprobar</button><button type="button" class="btn btn-danger btn-sm" onclick="asSetOvertime(\'' + o.id + '\',\'rejected\')">Rechazar</button></div>' : '';
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(o.userShort || 'Valeria') + ' · ' + esc(o.date) + ' · ' + (o.minutes / 60).toFixed(1) + ' h</b><span class="badge ' + (o.status === 'approved' ? 'badge-green' : o.status === 'rejected' ? 'badge-red' : 'badge-orange') + '">' + esc(o.status) + '</span></div><small>' + esc(o.reason) + '</small>' + acts + '</div>';
+  }).join('');
+}
+function asSetOvertime(id, status) {
+  if (!asIsAdminView()) return;
+  var list = getAsistenciaOvertime();
+  var o = list.find(function(x) { return x.id === id; });
+  if (!o) return;
+  o.status = status;
+  saveAsistenciaOvertime(list);
+  asRenderAdmin();
+  showToast(status === 'approved' ? 'Aprobado' : 'Rechazado', 'success');
+}
+function asRenderAdminNomina(list) {
+  var w = asWorkerUser();
+  var q = asQuincenaRange(new Date());
+  var rows = asShiftsInRange(w.pin, q.from, q.to);
+  var ms = rows.reduce(function(a, s) { return a + asWorkedMs(s); }, 0);
+  var hours = ms / 3600000;
+  var rate = getAsistenciaCfg().hourlyMxn;
+  var pay = (rate !== '' && rate != null) ? hours * Number(rate) : null;
+  var ot = getAsistenciaOvertime().filter(function(o) { return o.status === 'approved' && o.date >= asLocalDateStr(q.from) && o.date <= asLocalDateStr(q.to); });
+  var otH = ot.reduce(function(a, o) { return a + (o.minutes || 0); }, 0) / 60;
+  list.innerHTML = '<div class="as-item"><b>Nómina simple · ' + esc(w.short) + '</b><small>' + q.label + '</small>' +
+    '<div class="as-grid2" style="margin-top:.5rem"><small><b>Horas (pausas fuera):</b> ' + hours.toFixed(2) + 'h</small>' +
+    '<small><b>Tiempo extra aprobado:</b> ' + otH.toFixed(1) + 'h</small>' +
+    '<small><b>Tarifa:</b> ' + (pay == null ? 'no definida' : fmtMoney(rate) + '/h') + '</small>' +
+    '<small><b>Estimado:</b> ' + (pay == null ? '—' : fmtMoney(pay + otH * Number(rate || 0))) + '</small></div>' +
+    '<small>Sin tarifas escolares. La tarifa se edita en Configuración.</small></div>';
+}
+function asRenderAdminPets(list) {
+  var rows = getAsistenciaPeticiones().slice().sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+  if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin peticiones.</div>'; return; }
+  list.innerHTML = rows.map(function(p) {
+    var acts = p.status !== 'done' ? '<div class="as-item-actions">' +
+      (p.status === 'pending' ? '<button type="button" class="btn btn-outline btn-sm" onclick="asSetPeticion(\'' + p.id + '\',\'seen\')">Visto</button>' : '') +
+      '<button type="button" class="btn btn-success btn-sm" onclick="asSetPeticion(\'' + p.id + '\',\'done\')">Hecho</button></div>' : '';
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(p.userShort || 'Valeria') + ' · ' + esc(p.type === 'duda' ? 'Duda' : 'Material') + ' · ' + esc(p.subject) + '</b><span class="badge ' + (p.status === 'done' ? 'badge-green' : p.status === 'seen' ? 'badge-blue' : 'badge-orange') + '">' + esc(p.status) + '</span></div>' +
+      '<small>' + esc(p.detail) + (p.urgency ? ' · ' + esc(p.urgency) : '') + '</small>' +
+      '<small>' + asFmtDateTime(p.createdAt) + '</small>' +
+      (p.photo ? '<img src="' + p.photo + '" class="as-thumb" alt="">' : '') + acts + '</div>';
+  }).join('');
+}
+function asSetPeticion(id, status) {
+  if (!asIsAdminView()) return;
+  var list = getAsistenciaPeticiones();
+  var p = list.find(function(x) { return x.id === id; });
+  if (!p) return;
+  p.status = status;
+  saveAsistenciaPeticiones(list);
+  asRenderAdmin();
+  showToast('Petición actualizada', 'success');
 }
 
 /* ============================================================
@@ -4153,6 +5035,7 @@ function renderConfig() {
   ).join('');
 
   renderAsistenciaPins();
+  renderAsistenciaCfg();
 }
 
 function adminGuard() { if (!isAdmin()) { showToast('No tienes permisos para esta acción', 'error'); return true; } return false; }
@@ -4228,6 +5111,10 @@ function exportAllJSON() {
     asistenciaExpenses: getAsistenciaClockExpenses(),
     accesos: getAsistenciaAccesos(),
     asistenciaPins: getAsistenciaUsers(),
+    asistenciaTasks: getAsistenciaTasks(),
+    asistenciaPeticiones: getAsistenciaPeticiones(),
+    asistenciaOvertime: getAsistenciaOvertime(),
+    asistenciaCfg: getAsistenciaCfg(),
     exportDate: new Date().toISOString()
   };
   downloadFile(JSON.stringify(data, null, 2), 'bvg-backup-' + new Date().toISOString().split('T')[0] + '.json', 'application/json');
@@ -4283,6 +5170,10 @@ function importJSON(event) {
       if (data.asistenciaExpenses) saveAsistenciaClockExpenses(data.asistenciaExpenses);
       if (data.accesos) saveAsistenciaAccesos(data.accesos);
       if (data.asistenciaPins) saveAsistenciaUsers(data.asistenciaPins);
+      if (data.asistenciaTasks) saveAsistenciaTasks(data.asistenciaTasks);
+      if (data.asistenciaPeticiones) saveAsistenciaPeticiones(data.asistenciaPeticiones);
+      if (data.asistenciaOvertime) saveAsistenciaOvertime(data.asistenciaOvertime);
+      if (data.asistenciaCfg) saveData(STORAGE_KEYS.asistenciaCfg, data.asistenciaCfg);
       logActivity('export', 'Datos importados', 'Backup JSON restaurado');
       showToast('Datos importados correctamente', 'success');
       setTimeout(() => location.reload(), 1000);
@@ -4321,7 +5212,11 @@ function gatherSnapshot() {
     asistenciaClients: getAsistenciaClients(),
     asistenciaExpenses: getAsistenciaClockExpenses(),
     accesos: getAsistenciaAccesos(),
-    asistenciaPins: getAsistenciaUsers()
+    asistenciaPins: getAsistenciaUsers(),
+    asistenciaTasks: getAsistenciaTasks(),
+    asistenciaPeticiones: getAsistenciaPeticiones(),
+    asistenciaOvertime: getAsistenciaOvertime(),
+    asistenciaCfg: getAsistenciaCfg()
   };
 }
 
@@ -4576,6 +5471,10 @@ function confirmRestore() {
   if (snap.asistenciaExpenses) saveAsistenciaClockExpenses(snap.asistenciaExpenses);
   if (snap.accesos) saveAsistenciaAccesos(snap.accesos);
   if (snap.asistenciaPins) saveAsistenciaUsers(snap.asistenciaPins);
+  if (snap.asistenciaTasks) saveAsistenciaTasks(snap.asistenciaTasks);
+  if (snap.asistenciaPeticiones) saveAsistenciaPeticiones(snap.asistenciaPeticiones);
+  if (snap.asistenciaOvertime) saveAsistenciaOvertime(snap.asistenciaOvertime);
+  if (snap.asistenciaCfg) saveData(STORAGE_KEYS.asistenciaCfg, snap.asistenciaCfg);
   closeRestoreModal();
   showToast('Versión restaurada exitosamente. Recargando...', 'success', 2000);
   setTimeout(function() { location.reload(); }, 1500);
