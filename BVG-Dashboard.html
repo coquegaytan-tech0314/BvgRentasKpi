@@ -477,10 +477,12 @@ function aloraApplyWindowSeason() {
         <div style="display:flex;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap;font-size:.7rem">
           <span><span class="cal-event norte" style="padding:2px 6px">■</span> 1404 Norte</span>
           <span><span class="cal-event sur" style="padding:2px 6px">■</span> 1401 Sur</span>
+          <span><span class="cal-event n1204" style="padding:2px 6px">■</span> 1204 Norte</span>
           <span><span class="cal-event mant" style="padding:2px 6px">■</span> Mantenimiento</span>
         </div>
 
         <div id="calGrid"></div>
+        <div id="calProximas" class="cal-proximas"></div>
 
         <!-- Tasks -->
         <div style="margin-top:1.5rem">
@@ -4027,6 +4029,15 @@ function renderDashCharts(bookings, expenses) {
 /* ============================================================
    MINI CALENDAR (reusable) with occupancy intensity
    ============================================================ */
+function calEventClass(depto) {
+  var d = depto || '';
+  if (d.indexOf('Mantenimiento') >= 0) return 'mant';
+  if (d.indexOf('1204') >= 0) return 'n1204';
+  if (d.indexOf('1404') >= 0) return 'norte';
+  if (d.indexOf('1401') >= 0) return 'sur';
+  return 'mant';
+}
+
 function renderMiniCalendar(containerId, year, month) {
   const container = document.getElementById(containerId);
   const bookings = getBookings().filter(b => ['COMPLETADA','EN CURSO','POR LLEGAR','Mantenimiento'].includes(b.status));
@@ -4051,10 +4062,9 @@ function renderMiniCalendar(containerId, year, month) {
     bookings.forEach(b => {
       if (b.entrada && b.salida && b.entrada <= dateStr && b.salida > dateStr) {
         occCount++;
-        let cls = 'mant';
-        if (b.depto.includes('1404') && !b.depto.includes('Mantenimiento')) cls = 'norte';
-        else if (b.depto.includes('1401') && !b.depto.includes('Mantenimiento')) cls = 'sur';
-        events += '<div class="cal-event ' + cls + '" title="' + esc(b.rent) + ' — ' + esc(b.depto) + '">' + esc(b.rent).substring(0, 10) + '</div>';
+        const cls = calEventClass(b.depto);
+        const label = (b.rent || '').substring(0, 14);
+        events += '<div class="cal-event ' + cls + '" title="' + esc(b.rent) + ' — ' + esc(b.depto) + '">' + esc(label) + '</div>';
       }
     });
 
@@ -5247,12 +5257,43 @@ function deleteReceipt(id) {
    5. CALENDARIO Y TAREAS
    ============================================================ */
 let calYear, calMonth;
+function renderProximasReservas() {
+  const box = document.getElementById('calProximas');
+  if (!box) return;
+  const today = asLocalDateStr(Date.now());
+  const allowed = ['COMPLETADA', 'EN CURSO', 'POR LLEGAR', 'Mantenimiento'];
+  const list = getBookings().filter(function(b) {
+    return b && b.salida && b.salida >= today && allowed.indexOf(b.status) >= 0;
+  }).sort(function(a, b) {
+    return (a.entrada || '').localeCompare(b.entrada || '');
+  });
+
+  let html = '<h3 class="cal-proximas-title">Próximas reservas</h3>';
+  if (!list.length) {
+    html += '<p class="cal-proximas-empty">No hay reservas próximas.</p>';
+    box.innerHTML = html;
+    return;
+  }
+  html += '<div class="cal-proximas-list">';
+  list.forEach(function(b) {
+    const cls = calEventClass(b.depto);
+    html += '<div class="cal-proxima">' +
+      '<span class="cal-event ' + cls + '">' + esc(b.depto || '—') + '</span>' +
+      '<span class="cal-proxima-guest">' + esc(b.rent || '—') + '</span>' +
+      '<span class="cal-proxima-dates">' + fmtDate(b.entrada) + ' → ' + fmtDate(b.salida) + '</span>' +
+    '</div>';
+  });
+  html += '</div>';
+  box.innerHTML = html;
+}
+
 function renderCalendar() {
   const now = new Date();
   if (!calYear) { calYear = now.getFullYear(); calMonth = now.getMonth(); }
   const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   document.getElementById('calTitle').textContent = monthNames[calMonth] + ' ' + calYear;
   renderMiniCalendar('calGrid', calYear, calMonth);
+  renderProximasReservas();
   renderTasks();
 }
 function calNav(dir) {

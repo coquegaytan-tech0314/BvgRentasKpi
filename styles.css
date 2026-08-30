@@ -921,13 +921,14 @@ th.sort-desc::after { content: ' ↓'; opacity: 1; }
   text-transform: uppercase;
 }
 .cal-cell {
-  min-height: 70px;
+  min-height: 90px;
   background: var(--bg-secondary);
   padding: .25rem;
   font-size: .65rem;
   position: relative;
+  overflow: hidden;
 }
-.cal-cell.empty { background: var(--bg-primary); }
+.cal-cell.empty { background: var(--bg-primary); overflow: hidden; }
 .cal-cell .day-num { font-weight: 600; color: var(--text-secondary); margin-bottom: 2px; }
 .cal-cell .cal-event {
   padding: 1px 3px;
@@ -935,13 +936,41 @@ th.sort-desc::after { content: ' ↓'; opacity: 1; }
   margin-bottom: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
+  max-height: 2.4em;
   font-size: .6rem;
   font-weight: 500;
 }
 .cal-event.norte { background: rgba(130,199,232,.35); color: #1A6B8A; }
 .cal-event.sur { background: rgba(196,164,132,.40); color: #6B4F2A; }
+.cal-event.n1204 { background: rgba(224,122,95,.32); color: #8B3A2A; }
 .cal-event.mant { background: rgba(212,160,23,.22); color: #854d0e; }
+.cal-proximas { margin: 1rem 0 0; }
+.cal-proximas-title { font-size: 1rem; margin-bottom: .5rem; }
+.cal-proximas-empty { color: var(--text-muted); font-size: .8rem; margin: 0; }
+.cal-proximas-list {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.cal-proxima {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .4rem .65rem;
+  font-size: .8rem;
+}
+.cal-proxima .cal-event { padding: 2px 6px; white-space: nowrap; }
+.cal-proxima-guest { font-weight: 600; color: var(--text-primary); }
+.cal-proxima-dates { color: var(--text-muted); font-size: .75rem; margin-left: auto; }
 .cal-cell.today { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* Occupancy intensity */
 .cal-cell.occ-1 { background: rgba(255,56,92,.06); }
@@ -1119,7 +1148,7 @@ th.sort-desc::after { content: ' ↓'; opacity: 1; }
   .page-header { flex-direction: column; align-items: flex-start; }
   .filters { flex-direction: column; }
   .filters input, .filters select { width: 100%; }
-  .cal-cell { min-height: 50px; }
+  .cal-cell { min-height: 76px; }
   html { font-size: 13px; }
   .modal { max-width: 100%; max-height: 100vh; border-radius: 0; }
   .modal-overlay { padding: 0; }
