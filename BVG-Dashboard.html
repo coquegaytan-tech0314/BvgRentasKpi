@@ -553,7 +553,7 @@
           <p class="as-muted">PIN de 4 dígitos para el checador. No reemplaza la contraseña del dashboard.</p>
           <input type="tel" id="asPinInput" class="as-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="····" autocomplete="one-time-code" aria-label="PIN de asistencia">
           <button type="button" class="btn btn-primary as-pin-btn" onclick="asTryPin()">Entrar al checador</button>
-          <p class="as-muted as-center">Valeria (trabajadora) o Koke (admin). Los PINs se pueden cambiar en Configuración.</p>
+          <p class="as-muted as-center">Valeria (colaboradora) o Koke (admin). Los PINs se pueden cambiar en Configuración.</p>
         </div>
 
         <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
@@ -666,7 +666,7 @@
             <input type="text" id="cfgAsNewShort" placeholder="Corto" style="width:100px">
             <input type="password" id="cfgAsNewPin" placeholder="PIN" inputmode="numeric" maxlength="4" style="width:80px">
             <select id="cfgAsNewRole" style="width:130px">
-              <option value="worker">Trabajadora</option>
+              <option value="worker">Colaboradora</option>
               <option value="admin">Admin</option>
             </select>
             <button class="btn btn-primary btn-sm" onclick="addAsistenciaUser()">Agregar</button>
@@ -2143,7 +2143,7 @@ function renderAsistencia() {
   whoBar.style.display = u ? 'flex' : 'none';
   if (u) {
     document.getElementById('asWhoName').textContent = u.short || u.name;
-    document.getElementById('asWhoRole').textContent = u.role === 'admin' ? 'Admin' : 'Trabajadora';
+    document.getElementById('asWhoRole').textContent = u.role === 'admin' ? 'Admin' : 'Colaboradora';
     desk.style.display = asIsPhone() ? 'none' : '';
     var s = asActiveShift();
     if (s) {
@@ -2180,7 +2180,7 @@ function renderAsistenciaPins() {
       '<input type="text" value="' + esc(u.short || '') + '" onchange="updateAsistenciaUser(' + i + ',\'short\',this.value)" style="width:90px" placeholder="Corto">' +
       '<input type="text" value="' + esc(String(u.pin || '')) + '" inputmode="numeric" maxlength="4" onchange="updateAsistenciaUser(' + i + ',\'pin\',this.value)" style="width:80px" placeholder="PIN">' +
       '<select onchange="updateAsistenciaUser(' + i + ',\'role\',this.value)" style="width:130px">' +
-        '<option value="worker"' + (u.role === 'worker' ? ' selected' : '') + '>Trabajadora</option>' +
+        '<option value="worker"' + (u.role === 'worker' ? ' selected' : '') + '>Colaboradora</option>' +
         '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>Admin</option>' +
       '</select>' +
       '<button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="removeAsistenciaUser(' + i + ')">🗑</button>' +
