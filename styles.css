@@ -1597,6 +1597,67 @@ input[type="date"] { min-height: 44px; }
 .as-cal-cell.worked .as-cal-dot { background: var(--green); }
 .as-cal-cell.abierta .as-cal-dot { background: var(--orange); }
 .as-cal-cell.falta .as-cal-dot { background: var(--red); }
+.as-cal-hrs {
+  display: block;
+  font-size: .58rem;
+  font-weight: 800;
+  margin-top: 1px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.as-cal-cell { min-height: 52px; }
+.as-admin-sheet-kpis { margin-bottom: .85rem; }
+.as-sheet-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card, var(--bg-input));
+}
+.as-sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+  min-width: 520px;
+}
+.as-sheet th {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: .55rem .5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-input);
+  white-space: nowrap;
+}
+.as-sheet td {
+  padding: .6rem .5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, inherit);
+}
+.as-sheet tbody tr { cursor: pointer; }
+.as-sheet tbody tr:last-child td { border-bottom: none; }
+.as-sheet tbody tr:hover { background: var(--bg-hover); }
+.as-punch-list { display: flex; flex-direction: column; gap: .35rem; margin-top: .55rem; }
+.as-punch-row {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr auto;
+  gap: .35rem .65rem;
+  align-items: center;
+  font-size: .75rem;
+  color: var(--text-secondary);
+  background: var(--bg-card, transparent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .4rem .55rem;
+  cursor: pointer;
+}
+.as-punch-row .as-punch-date { font-weight: 800; color: var(--text-primary, inherit); }
+.as-punch-row b { color: var(--text-muted); font-size: .65rem; text-transform: uppercase; letter-spacing: .03em; margin-right: .2rem; }
 .as-cal-legend {
   display: flex; flex-wrap: wrap; gap: .65rem 1rem;
   font-size: .75rem; color: var(--text-muted); margin-top: .85rem;
@@ -1611,7 +1672,7 @@ input[type="date"] { min-height: 44px; }
 
 @media (min-width: 640px) {
   .as-kpi-4 { grid-template-columns: repeat(4, 1fr); }
-  .as-cal-cell { min-height: 56px; font-size: .85rem; }
+  .as-cal-cell { min-height: 64px; font-size: .85rem; }
 }
 @media (max-width: 768px) {
   .bottom-nav a { min-width: 44px; padding: .35rem .1rem; font-size: .55rem; }
@@ -1620,4 +1681,34 @@ input[type="date"] { min-height: 44px; }
   .as-pin-card { max-width: none; }
   .as-tool-grid { grid-template-columns: 1fr; }
   .as-foto-actions { grid-template-columns: 1fr; }
+  .as-punch-row { grid-template-columns: 1fr 1fr; }
+  .as-sheet { min-width: 0; }
+  .as-sheet thead { display: none; }
+  .as-sheet, .as-sheet tbody, .as-sheet tr, .as-sheet td { display: block; width: 100%; }
+  .as-sheet-wrap { border: none; background: transparent; }
+  .as-sheet tbody tr {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: .5rem;
+    padding: .45rem .7rem .55rem;
+  }
+  .as-sheet tbody tr:hover { background: var(--bg-input); }
+  .as-sheet td {
+    border: none;
+    padding: .22rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: .75rem;
+  }
+  .as-sheet td::before {
+    content: attr(data-label);
+    font-weight: 800;
+    color: var(--text-muted);
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    flex-shrink: 0;
+  }
 }

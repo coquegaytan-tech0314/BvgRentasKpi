@@ -180,4 +180,63 @@ if (asWelcomeLoginKind('team', 'team') !== 'admin') throw new Error('team passwo
 if (asWelcomeLoginKind('nope', 'team') !== 'reject') throw new Error('wrong password stays out');
 if (asWelcomeLoginKind('', 'team') !== 'reject') throw new Error('empty password stays out');
 
+if (html.indexOf("var AS_ADMIN_TAB = 'turnos'") === -1) throw new Error('default admin tab must be turnos');
+if (html.indexOf('class="as-tab active" data-as-tab="turnos"') === -1) throw new Error('Turnos tab must be the default active tab');
+if (html.indexOf('class="as-tab active" data-as-tab="resumen"') !== -1) throw new Error('Resumen must not be the default active tab');
+if (html.indexOf('asRenderAdminTurnos') === -1) throw new Error('timesheet renderer missing');
+if (html.indexOf('class="as-sheet"') === -1) throw new Error('timesheet table class');
+if (html.indexOf('<th>Colaboradora</th><th>Fecha</th><th>Entrar</th><th>Salir</th><th>Horas</th><th>Estado</th>') === -1) throw new Error('timesheet columns');
+if (html.indexOf('as-cal-hrs') === -1) throw new Error('calendar cells must show hours');
+if (html.indexOf('as-punch-row') === -1) throw new Error('resumen last punches');
+if (html.indexOf('AS_WEEK_TARGET_H = 40') === -1) throw new Error('Valerie 40h weekly target');
+if (html.indexOf('try { renderAsistencia(); } catch (e) {}') === -1) throw new Error('welcome admin session must refresh asistencia panel');
+
+var css = fs.readFileSync(__dirname + '/styles.css', 'utf8');
+if (css.indexOf('.as-sheet') === -1) throw new Error('timesheet css missing');
+if (css.indexOf('.as-cal-hrs') === -1) throw new Error('calendar hours css missing');
+if (css.indexOf('content: attr(data-label)') === -1) throw new Error('mobile stacked timesheet rows');
+
+function asPauses(s) { return (s && Array.isArray(s.pauses)) ? s.pauses : []; }
+function asIsPaused(s) {
+  var p = asPauses(s);
+  return p.length > 0 && !p[p.length - 1].endedAt;
+}
+function asPauseMs(s, until) {
+  var endCap = until || Date.now();
+  return asPauses(s).reduce(function(sum, p) {
+    if (!p || !p.startedAt) return sum;
+    var pe = p.endedAt || endCap;
+    return sum + Math.max(0, pe - p.startedAt);
+  }, 0);
+}
+function asWorkedMs(s, until) {
+  if (!s || !s.startedAt) return 0;
+  var end = s.endedAt || until || Date.now();
+  return Math.max(0, end - s.startedAt - asPauseMs(s, end));
+}
+function asHoursLabel(ms) {
+  return (Math.max(0, ms) / 3600000).toFixed(2) + 'h';
+}
+function asShiftEstado(s) {
+  if (!s || s.endedAt) return { key: 'cerrado', label: 'cerrado', badge: 'badge-green' };
+  if (asIsPaused(s)) return { key: 'pausa', label: 'pausa', badge: 'badge-orange' };
+  return { key: 'curso', label: 'en curso', badge: 'badge-orange' };
+}
+function asWeekStart(d) {
+  var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var day = x.getDay();
+  var diff = day === 0 ? 6 : day - 1;
+  x.setDate(x.getDate() - diff);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+var closed = { startedAt: new Date(2026, 7, 24, 9, 0).getTime(), endedAt: new Date(2026, 7, 24, 17, 30).getTime(), pauses: [{ startedAt: new Date(2026, 7, 24, 13, 0).getTime(), endedAt: new Date(2026, 7, 24, 14, 0).getTime() }] };
+if (asHoursLabel(asWorkedMs(closed)) !== '7.50h') throw new Error('hours exclude 1h pause');
+if (asShiftEstado(closed).label !== 'cerrado') throw new Error('closed estado');
+if (asShiftEstado({ startedAt: 1, endedAt: null }).label !== 'en curso') throw new Error('open estado');
+if (asShiftEstado({ startedAt: 1, endedAt: null, pauses: [{ startedAt: 2 }] }).label !== 'pausa') throw new Error('pause estado');
+var mon = asWeekStart(new Date(2026, 7, 30));
+if (mon.getDay() !== 1 || mon.getDate() !== 24) throw new Error('week is Mon-Sun starting 24 Aug 2026');
+if (loginChunk.includes('as-sheet') || loginChunk.includes('asAdmin')) throw new Error('welcome card must stay isolated from admin timesheet');
+
 console.log('as-alora-checklist.test.js ok');
