@@ -6,10 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#FFF8F4">
+<meta name="theme-color" content="#F4EDE4">
 <meta name="format-detection" content="telephone=no">
-<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFMT1JBIiwKICAic2hvcnRfbmFtZSI6ICJBTE9SQSIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRjdGN0Y1IiwKICAidGhlbWVfY29sb3IiOiAiI0Y3RjdGNSIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCw8c3ZnIHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2Zycgdmlld0JveD0nMCAwIDQ4IDQ4Jz48cmVjdCB3aWR0aD0nNDgnIGhlaWdodD0nNDgnIHJ4PScxNicgZmlsbD0nI0ZGMzg1QycvPjx0ZXh0IHg9JzI0JyB5PSczMicgdGV4dC1hbmNob3I9J21pZGRsZScgZm9udC1zaXplPScyMicgZm9udC13ZWlnaHQ9JzgwMCcgZmlsbD0nI2ZmZicgZm9udC1mYW1pbHk9J3NhbnMtc2VyaWYnPkE8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjQ4eDQ4IiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0KICBdCn0=">
-<title>ALORA — BVG Residencial · Ixtapa</title>
+<link rel="icon" type="image/png" sizes="64x64" href="assets/alora-favicon.png">
+<link rel="apple-touch-icon" href="assets/alora-apple-touch.png">
+<title>ALORA — BVG Residencial</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Firebase SDK (compat for no-build-tool usage) -->
@@ -71,11 +72,10 @@
      ============================================================ -->
 <div id="loginScreen">
   <div class="login-box">
-    <svg class="alora-mark" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <rect width="48" height="48" rx="16" fill="#FF385C"/>
-      <text x="24" y="32" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="sans-serif">A</text>
-    </svg>
-    <h1 class="alora-wordmark">ALORA</h1>
+    <div class="alora-brand-stack">
+      <img src="assets/alora-window.png" alt="" class="alora-window-img alora-window-lg" width="72" height="72">
+      <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-lg">
+    </div>
     <p class="alora-sub">BVG Residencial · Ixtapa Zihuatanejo</p>
     <div class="error" id="loginError">Contraseña incorrecta</div>
     <input type="password" id="loginPassword" placeholder="Contraseña" autofocus>
@@ -100,7 +100,10 @@
     <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2zm0 4h14a1 1 0 010 2H3a1 1 0 010-2z"/></svg>
     </button>
-    <div class="alora-wordmark">ALORA</div>
+    <div class="alora-brand-inline">
+      <img src="assets/alora-window.png" alt="" class="alora-window-img" width="28" height="28">
+      <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-sm">
+    </div>
   </header>
   <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
@@ -108,11 +111,11 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo" onclick="handleLogoTap()" style="cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none">
-        <svg viewBox="0 0 36 36" fill="none">
-          <rect width="36" height="36" rx="10" fill="#FF385C"/>
-          <text x="18" y="24" text-anchor="middle" font-size="16" font-weight="800" fill="#fff" font-family="sans-serif">A</text>
-        </svg>
-        <span class="alora-wordmark">ALORA<small>BVG Residencial · Ixtapa Zihuatanejo</small></span>
+        <img src="assets/alora-window.png" alt="" class="alora-window-img" width="40" height="40">
+        <span>
+          <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-side">
+          <small>BVG Residencial · Ixtapa Zihuatanejo</small>
+        </span>
       </div>
       <nav>
         <a href="#" data-section="dashboard" class="active" onclick="showSection('dashboard')">
@@ -551,6 +554,10 @@
         </div>
 
         <div id="asPinGate" class="settings-card as-pin-card">
+          <div class="alora-brand-stack" style="margin-bottom:1rem">
+            <img src="assets/alora-window.png" alt="" class="alora-window-img alora-window-md" width="56" height="56">
+            <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-md">
+          </div>
           <h3>¿Quién eres?</h3>
           <p class="as-muted">PIN de 4 dígitos. 2604 es Valerie · 0314 es Koke (admin). No hay usuario ni «SOY NUEVO».</p>
           <input type="tel" id="asPinInput" class="as-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="····" autocomplete="one-time-code" aria-label="PIN de asistencia">
