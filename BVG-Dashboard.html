@@ -477,7 +477,7 @@ function aloraApplyWindowSeason() {
         <div style="display:flex;gap:.75rem;margin-bottom:.75rem;flex-wrap:wrap;font-size:.7rem">
           <span><span class="cal-event norte" style="padding:2px 6px">■</span> 1404 Norte</span>
           <span><span class="cal-event sur" style="padding:2px 6px">■</span> 1401 Sur</span>
-          <span><span class="cal-event n1204" style="padding:2px 6px">■</span> 1204 Norte</span>
+          <span><span class="cal-event n1204" style="padding:2px 6px">■</span> Tío Pepe <span class="cal-legend-note">1204 Norte</span></span>
           <span><span class="cal-event mant" style="padding:2px 6px">■</span> Mantenimiento</span>
         </div>
 
@@ -3807,7 +3807,7 @@ function renderDashboard() {
   const gastos2026 = expenses2026.reduce((s, e) => s + (e.cantidad || 0), 0);
   const gastosTotal = expenses.reduce((s, e) => s + (e.cantidad || 0), 0);
 
-  const bookedNightsYr = bookings.filter(b => b.entrada && b.entrada.startsWith(String(yr)) && ['COMPLETADA','EN CURSO','POR LLEGAR'].includes(b.status) && !b.depto.includes('Mantenimiento'))
+  const bookedNightsYr = bookings.filter(b => b.entrada && b.entrada.startsWith(String(yr)) && ['COMPLETADA','EN CURSO','POR LLEGAR'].includes(b.status) && !b.depto.includes('Mantenimiento') && !b.depto.includes('1204'))
     .reduce((s, b) => s + daysBetween(b.entrada, b.salida), 0);
   const occupancy = ((bookedNightsYr / (365 * 2)) * 100).toFixed(1);
 
@@ -4036,6 +4036,10 @@ function calEventClass(depto) {
   if (d.indexOf('1404') >= 0) return 'norte';
   if (d.indexOf('1401') >= 0) return 'sur';
   return 'mant';
+}
+function calDeptoLabel(depto) {
+  if (calEventClass(depto) === 'n1204') return 'Tío Pepe';
+  return depto || '—';
 }
 
 function renderMiniCalendar(containerId, year, month) {
@@ -5278,7 +5282,7 @@ function renderProximasReservas() {
   list.forEach(function(b) {
     const cls = calEventClass(b.depto);
     html += '<div class="cal-proxima">' +
-      '<span class="cal-event ' + cls + '">' + esc(b.depto || '—') + '</span>' +
+      '<span class="cal-event ' + cls + '">' + esc(calDeptoLabel(b.depto)) + '</span>' +
       '<span class="cal-proxima-guest">' + esc(b.rent || '—') + '</span>' +
       '<span class="cal-proxima-dates">' + fmtDate(b.entrada) + ' → ' + fmtDate(b.salida) + '</span>' +
     '</div>';
