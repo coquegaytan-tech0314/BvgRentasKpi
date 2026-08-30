@@ -96,4 +96,88 @@ var shifts = [
 ];
 if (asCountFaltasThrough(shifts, aug1, aug15, now) !== 8) throw new Error('faltas 1-10 minus 3 and 10 = 8');
 
+function aloraSeasonKey(month1to12) {
+  var m = Number(month1to12);
+  if (!(m >= 1 && m <= 12)) return 'alta';
+  if (m === 12 || m <= 3) return 'alta';
+  if (m <= 5) return 'primavera';
+  if (m <= 10) return 'lluvias';
+  return 'otono';
+}
+if (aloraSeasonKey(12) !== 'alta' || aloraSeasonKey(1) !== 'alta' || aloraSeasonKey(3) !== 'alta') throw new Error('alta');
+if (aloraSeasonKey(4) !== 'primavera' || aloraSeasonKey(5) !== 'primavera') throw new Error('primavera');
+if (aloraSeasonKey(6) !== 'lluvias' || aloraSeasonKey(8) !== 'lluvias' || aloraSeasonKey(10) !== 'lluvias') throw new Error('lluvias');
+if (aloraSeasonKey(11) !== 'otono') throw new Error('otono');
+if (aloraSeasonKey(0) !== 'alta' || aloraSeasonKey(99) !== 'alta') throw new Error('alta fallback');
+if (aloraSeasonKey(8) !== 'lluvias') throw new Error('Aug 2026 Mexico must be lluvias');
+
+function asNormalizeRole(u) {
+  if (!u) return u;
+  var pin = String(u.pin || '');
+  var role = String(u.role || '').toLowerCase();
+  if (pin === '2604') {
+    u.role = 'worker';
+  } else if (pin === '0314' || role === 'admin') {
+    u.role = 'admin';
+  } else if (role === 'worker' || role === 'colaboradora' || role === 'trabajadora' || !role) {
+    u.role = 'worker';
+  }
+  return u;
+}
+function asCanSeeRevenueFromUser(u) {
+  if (!u) return true;
+  u = asNormalizeRole({ pin: u.pin, role: u.role });
+  return u.role !== 'worker';
+}
+if (!asCanSeeRevenueFromUser(null)) throw new Error('no-PIN is owner and sees revenue');
+if (!asCanSeeRevenueFromUser({ pin: '0314', role: 'admin' })) throw new Error('Koke 0314 sees revenue');
+if (asCanSeeRevenueFromUser({ pin: '2604', role: 'worker' })) throw new Error('Valerie 2604 must not see revenue');
+if (asCanSeeRevenueFromUser({ pin: '2604', role: 'admin' })) throw new Error('PIN 2604 must hide revenue even if stored as admin');
+if (asCanSeeRevenueFromUser({ pin: '2604' })) throw new Error('PIN 2604 without role must hide revenue');
+if (asCanSeeRevenueFromUser({ pin: '2604', role: 'colaboradora' })) throw new Error('colaboradora label must hide revenue');
+if (!asCanSeeRevenueFromUser({ pin: '0314' })) throw new Error('PIN 0314 without role still sees revenue');
+
+function asBookingsWithoutIncome(list) {
+  return (list || []).map(function(b) {
+    var c = {};
+    Object.keys(b).forEach(function(k) {
+      if (k === 'total' || k === 'anticipo' || k === 'lim' || k === 'specialRate' || k === 'specialPrice') return;
+      c[k] = b[k];
+    });
+    return c;
+  });
+}
+var stripped = asBookingsWithoutIncome([{ rent: 'Ada', total: 16500, anticipo: '3/3', lim: 550, depto: '1404 Norte', nights: 3 }])[0];
+if (stripped.rent !== 'Ada' || stripped.depto !== '1404 Norte') throw new Error('ops fields stay');
+if (stripped.total != null || stripped.anticipo != null || stripped.lim != null) throw new Error('income fields stripped');
+
+var fs = require('fs');
+var html = fs.readFileSync(__dirname + '/BVG-Dashboard.html', 'utf8');
+var loginChunk = html.split('id="loginScreen"')[1].split('id="app"')[0];
+if (!loginChunk.includes('assets/alora-login-mark.png')) throw new Error('welcome card must use locked login mark');
+if (loginChunk.includes('alora-window.png') || loginChunk.includes('alora-window-lluvias')) throw new Error('welcome card must not use header or seasonal window');
+if (!loginChunk.includes('placeholder="Contraseña"')) throw new Error('welcome Contraseña field');
+if (!loginChunk.includes('Ingresar')) throw new Error('welcome Ingresar');
+if (!loginChunk.includes('BVG Residencial · Ixtapa Zihuatanejo')) throw new Error('welcome subtitle');
+if (!fs.existsSync(__dirname + '/assets/alora-login-mark.png')) throw new Error('locked login mark file missing');
+if (html.indexOf('password gate temporarily removed') !== -1) throw new Error('skip-login IIFE must be gone');
+if (html.indexOf('Safety net: hide login') !== -1) throw new Error('safety-net skip-login must be gone');
+if (html.indexOf("login.style.display = 'none'") !== -1) throw new Error('skip-login must not hide #loginScreen on load');
+if (html.indexOf("getElementById('loginScreen').style.display = 'none'") === -1) throw new Error('valid login still hides the gate');
+if (html.indexOf('class="topbar-logout"') === -1) throw new Error('mobile topbar needs Cerrar sesión');
+
+function asWelcomeLoginKind(value, teamPassword) {
+  var v = String(value == null ? '' : value).trim();
+  if (v === '2604') return 'worker';
+  if (v === '0314') return 'admin';
+  if (teamPassword && v === String(teamPassword)) return 'admin';
+  return 'reject';
+}
+if (asWelcomeLoginKind('2604', 'team') !== 'worker') throw new Error('2604 is colaboradora');
+if (asWelcomeLoginKind(' 2604 ', 'team') !== 'worker') throw new Error('2604 trim');
+if (asWelcomeLoginKind('0314', 'team') !== 'admin') throw new Error('0314 is admin');
+if (asWelcomeLoginKind('team', 'team') !== 'admin') throw new Error('team password is admin');
+if (asWelcomeLoginKind('nope', 'team') !== 'reject') throw new Error('wrong password stays out');
+if (asWelcomeLoginKind('', 'team') !== 'reject') throw new Error('empty password stays out');
+
 console.log('as-alora-checklist.test.js ok');

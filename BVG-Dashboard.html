@@ -8,9 +8,52 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4EDE4">
 <meta name="format-detection" content="telephone=no">
-<link rel="icon" type="image/png" sizes="64x64" href="assets/alora-favicon.png">
-<link rel="apple-touch-icon" href="assets/alora-apple-touch.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/alora-favicon.png" id="aloraFavicon">
+<link rel="apple-touch-icon" href="assets/alora-apple-touch.png" id="aloraTouch">
 <title>ALORA — BVG Residencial</title>
+<script>
+/* Same original window year-round. Seasonal files are optional; missing = keep original. */
+function aloraSeasonKey(month1to12) {
+  var m = Number(month1to12);
+  if (!(m >= 1 && m <= 12)) return 'alta';
+  if (m === 12 || m <= 3) return 'alta';
+  if (m <= 5) return 'primavera';
+  if (m <= 10) return 'lluvias';
+  return 'otono';
+}
+function aloraMexicoCityMonth() {
+  try {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: 'numeric', day: 'numeric'
+    }).formatToParts(new Date());
+    var mo = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === 'month') mo = Number(parts[i].value);
+    }
+    return (mo >= 1 && mo <= 12) ? mo : 12;
+  } catch (e) { return 12; }
+}
+function aloraWindowSrc() {
+  return 'assets/alora-window-' + aloraSeasonKey(aloraMexicoCityMonth()) + '.png';
+}
+function aloraApplyWindowSeason() {
+  var src = aloraWindowSrc();
+  var probe = new Image();
+  probe.onload = function() {
+    var nodes = document.querySelectorAll('.alora-window-img');
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].closest && nodes[i].closest('#loginScreen')) continue;
+      nodes[i].src = src;
+    }
+    var fav = document.getElementById('aloraFavicon');
+    if (fav) fav.href = src;
+    var touch = document.getElementById('aloraTouch');
+    if (touch) touch.href = src;
+  };
+  probe.onerror = function() { /* no tinted variant — keep the original window */ };
+  probe.src = src;
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Firebase SDK (compat for no-build-tool usage) -->
@@ -73,7 +116,7 @@
 <div id="loginScreen">
   <div class="login-box">
     <div class="alora-brand-stack">
-      <img src="assets/alora-window.png" alt="" class="alora-window-img alora-window-lg" width="72" height="72">
+      <img src="assets/alora-login-mark.png" alt="" class="alora-window-img alora-window-lg" width="72" height="72">
       <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-lg">
     </div>
     <p class="alora-sub">BVG Residencial · Ixtapa Zihuatanejo</p>
@@ -83,12 +126,8 @@
   </div>
 </div>
 <script>
-/* Temporary: no password gate. Runs even if the big dashboard script fails. */
 (function () {
-  var login = document.getElementById('loginScreen');
-  var app = document.getElementById('app');
-  if (login) login.style.display = 'none';
-  if (app) app.style.display = 'block';
+  try { aloraApplyWindowSeason(); } catch (e) {}
 })();
 </script>
 
@@ -104,6 +143,7 @@
       <img src="assets/alora-window.png" alt="" class="alora-window-img" width="28" height="28">
       <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-sm">
     </div>
+    <button type="button" class="topbar-logout" onclick="logoutSession()">Cerrar sesión</button>
   </header>
   <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
@@ -134,7 +174,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
           Gastos
         </a>
-        <a href="#" data-section="recibos" onclick="showSection('recibos')">
+        <a href="#" data-section="recibos" class="income-only" onclick="showSection('recibos')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
           Recibos
         </a>
@@ -200,7 +240,7 @@
           <div class="crm-panel active" id="crmResumen">
             <div class="kpi-grid" id="crmKPIs"></div>
             <div class="chart-grid" style="margin-top:.75rem">
-              <div class="chart-box"><h3>Top 10 Clientes por Ingresos</h3><canvas id="chartTopClientes"></canvas></div>
+              <div class="chart-box income-only"><h3>Top 10 Clientes por Ingresos</h3><canvas id="chartTopClientes"></canvas></div>
               <div class="chart-box"><h3>Clientes Nuevos vs Recurrentes</h3><canvas id="chartClientesTipo"></canvas></div>
             </div>
           </div>
@@ -210,7 +250,7 @@
             <div class="crm-search-bar">
               <input type="text" id="crmSearch" placeholder="Buscar cliente..." oninput="renderCrmClientes()">
               <select id="crmSortBy" onchange="renderCrmClientes()">
-                <option value="revenue">Ordenar: Mayor Ingreso</option>
+                <option value="revenue" class="income-only">Ordenar: Mayor Ingreso</option>
                 <option value="visits">Ordenar: Más Visitas</option>
                 <option value="recent">Ordenar: Más Reciente</option>
                 <option value="alpha">Ordenar: A-Z</option>
@@ -228,9 +268,9 @@
         <!-- Charts -->
         <div class="chart-grid">
           <div class="chart-box"><h3>Fuentes de Reservas</h3><canvas id="chartFuentes"></canvas></div>
-          <div class="chart-box"><h3>Ventas Mensuales 2026</h3><canvas id="chartVentasMensuales"></canvas></div>
+          <div class="chart-box income-only"><h3>Ventas Mensuales 2026</h3><canvas id="chartVentasMensuales"></canvas></div>
           <div class="chart-box"><h3>Gastos por Tipo</h3><canvas id="chartGastosTipo"></canvas></div>
-          <div class="chart-box"><h3>Ingresos Mensuales por Depto</h3><canvas id="chartIngresoDepto"></canvas></div>
+          <div class="chart-box income-only"><h3>Ingresos Mensuales por Depto</h3><canvas id="chartIngresoDepto"></canvas></div>
         </div>
 
         <!-- Mini Calendar -->
@@ -280,8 +320,8 @@
                 <th>Depto</th>
                 <th class="sortable" data-sort="nights">Noches</th>
                 <th>Fuente</th>
-                <th class="sortable" data-sort="total">Total</th>
-                <th>Anticipo</th>
+                <th class="sortable income-only" data-sort="total">Total</th>
+                <th class="income-only">Anticipo</th>
                 <th>Status</th>
                 <th>Encargado</th>
                 <th>Acciones</th>
@@ -339,7 +379,7 @@
       <!-- ============================================================
            SECTION 4: RECIBOS (NEW)
            ============================================================ -->
-      <div class="section" id="sec-recibos">
+      <div class="section income-only" id="sec-recibos">
         <div class="page-header">
           <h2>Recibos</h2>
         </div>
@@ -460,20 +500,20 @@
           <h2>Reportes</h2>
           <div>
             <button class="btn btn-outline btn-sm" onclick="exportAllCSV()">Exportar CSV</button>
-            <button class="btn btn-outline btn-sm" onclick="exportAllJSON()">Exportar JSON</button>
+            <button class="btn btn-outline btn-sm income-only" onclick="exportAllJSON()">Exportar JSON</button>
           </div>
         </div>
 
         <div class="chart-grid">
-          <div class="chart-box"><h3>Ingresos vs Gastos Mensuales</h3><canvas id="chartIngGast"></canvas></div>
+          <div class="chart-box income-only"><h3>Ingresos vs Gastos Mensuales</h3><canvas id="chartIngGast"></canvas></div>
           <div class="chart-box"><h3>Ocupación por Departamento</h3><canvas id="chartOcupacion"></canvas></div>
-          <div class="chart-box"><h3>Comparación Año vs Año (2025 vs 2026)</h3><canvas id="chartYoY"></canvas></div>
-          <div class="chart-box"><h3>ADR (Tarifa Diaria Promedio) por Mes</h3><canvas id="chartADR"></canvas></div>
+          <div class="chart-box income-only"><h3>Comparación Año vs Año (2025 vs 2026)</h3><canvas id="chartYoY"></canvas></div>
+          <div class="chart-box income-only"><h3>ADR (Tarifa Diaria Promedio) por Mes</h3><canvas id="chartADR"></canvas></div>
         </div>
 
         <!-- Top clients & longest bookings -->
         <div class="chart-grid" style="margin-top:1rem">
-          <div class="chart-box">
+          <div class="chart-box income-only">
             <h3>Top 5 Clientes por Ingreso</h3>
             <div id="topClients"></div>
           </div>
@@ -512,7 +552,7 @@
           <button onclick="filterActivity('login',this)">Sesiones</button>
           <button onclick="filterActivity('booking',this)">Reservas</button>
           <button onclick="filterActivity('expense',this)">Gastos</button>
-          <button onclick="filterActivity('receipt',this)">Recibos</button>
+          <button class="income-only" onclick="filterActivity('receipt',this)">Recibos</button>
           <button onclick="filterActivity('task',this)">Tareas</button>
           <button onclick="filterActivity('save',this)">Guardados</button>
         </div>
@@ -787,18 +827,18 @@
           <button class="btn btn-primary btn-sm" style="margin-top:.75rem" onclick="saveAsistenciaCfg()">Guardar ajustes</button>
         </div>
 
-        <div class="settings-card admin-only">
+        <div class="settings-card admin-only income-only">
           <h3>Departamentos y Precios Base</h3>
           <div id="cfgApts"></div>
         </div>
 
-        <div class="settings-card admin-only">
+        <div class="settings-card admin-only income-only">
           <h3>Precios por Temporada</h3>
           <div id="cfgSeasons"></div>
           <button class="btn btn-primary btn-sm" style="margin-top:.5rem" onclick="addSeason()">+ Agregar Temporada</button>
         </div>
 
-        <div class="settings-card admin-only">
+        <div class="settings-card admin-only income-only">
           <h3>Clientes con Precio Especial</h3>
           <div id="cfgSpecialPrices"></div>
           <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
@@ -877,7 +917,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
       Rentas
     </a>
-    <a href="#" data-section="recibos" onclick="showSection('recibos')">
+    <a href="#" data-section="recibos" class="income-only" onclick="showSection('recibos')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
       Recibos
     </a>
@@ -913,20 +953,20 @@
         <div class="form-group"><label>Salida *</label><input type="date" id="bkSalida"></div>
         <div class="form-group"><label>Fuente</label><select id="bkFuente"></select></div>
         <div class="form-group"><label>Encargado</label><select id="bkEncargado"></select></div>
-        <div class="form-group full">
+        <div class="form-group full income-only">
           <label style="display:flex;align-items:center;gap:.5rem">
             <input type="checkbox" id="bkSpecialPrice" onchange="toggleSpecialPrice()" style="width:18px;height:18px;min-height:auto"> Precio especial
           </label>
         </div>
-        <div class="form-group" id="bkSpecialRateWrap" style="display:none">
+        <div class="form-group income-only" id="bkSpecialRateWrap" style="display:none">
           <label>Tarifa especial/noche</label><input type="number" id="bkSpecialRate" step="0.01" oninput="calcBookingNights()">
         </div>
-        <div class="form-group"><label>Total (MXN)</label><input type="number" id="bkTotal" step="0.01"></div>
-        <div class="form-group"><label>Anticipo</label><input type="text" id="bkAnticipo"></div>
+        <div class="form-group income-only"><label>Total (MXN)</label><input type="number" id="bkTotal" step="0.01"></div>
+        <div class="form-group income-only"><label>Anticipo</label><input type="text" id="bkAnticipo"></div>
         <div class="form-group"><label>Status</label>
           <select id="bkStatus"><option value="POR LLEGAR">Por Llegar</option><option value="EN CURSO">En Curso</option><option value="COMPLETADA">Completada</option><option value="CANCELADA">Cancelada</option><option value="Cambio De Fecha">Cambio de Fecha</option><option value="Mantenimiento">Mantenimiento</option></select>
         </div>
-        <div class="form-group"><label>Limpieza (MXN)</label><input type="number" id="bkLim" step="0.01" value="550"></div>
+        <div class="form-group income-only"><label>Limpieza (MXN)</label><input type="number" id="bkLim" step="0.01" value="550"></div>
         <div class="form-group"><label>Booking #</label><input type="text" id="bkBook"></div>
         <div class="form-group"><label>Noches (auto)</label><input type="number" id="bkNoches" readonly></div>
         <div class="form-group full"><label>Notas</label><textarea id="bkNotas" rows="2"></textarea></div>
@@ -978,8 +1018,8 @@
         <div class="form-group"><label>Departamento *</label>
           <select id="asCfDepto" onchange="asCfDeptoChange()">
             <option value="">Selecciona…</option>
-            <option value="1401 Sur">1401 Sur — $6,500 / noche</option>
-            <option value="1404 Norte">1404 Norte — $5,500 / noche</option>
+            <option value="1401 Sur">1401 Sur</option>
+            <option value="1404 Norte">1404 Norte</option>
             <option value="1204 Norte">1204 Norte</option>
           </select>
         </div>
@@ -998,7 +1038,7 @@
           </select>
         </div>
         <div class="form-group"><label>Noches</label><input type="number" id="asCfNoches" min="0" placeholder="auto" oninput="asCfDeptoChange()"></div>
-        <div class="form-group"><label>Total MXN (si se sabe)</label><input type="number" id="asCfTotal" min="0" placeholder="opcional"></div>
+        <div class="form-group income-only"><label>Total MXN (si se sabe)</label><input type="number" id="asCfTotal" min="0" placeholder="opcional"></div>
         <div class="form-group full"><label>Notas</label><textarea id="asCfNotas" rows="2" placeholder="Observaciones, adelantos…"></textarea></div>
       </div>
     </div>
@@ -1465,6 +1505,7 @@ function applyAdminRestrictions() {
   if (document.getElementById('sec-config')) renderConfig();
   var asSec = document.getElementById('sec-asistencia');
   if (asSec && asSec.classList.contains('active')) renderAsistencia();
+  applyRevenueRestrictions();
 }
 
 // Default settings
@@ -1807,13 +1848,46 @@ function initSampleData() {
 /* ============================================================
    LOGIN
    ============================================================ */
-function attemptLogin() {
+function asWelcomeLoginKind(value, teamPassword) {
+  var v = String(value == null ? '' : value).trim();
+  if (v === '2604') return 'worker';
+  if (v === '0314') return 'admin';
+  if (teamPassword && v === String(teamPassword)) return 'admin';
+  return 'reject';
+}
+function asWelcomeSessionForKind(kind) {
+  if (kind === 'worker') {
+    return { pin: '2604', name: 'Valeria Martínez-Calderón', role: 'worker', short: 'Valeria', sessionId: asUid(), loginAt: Date.now() };
+  }
+  if (kind === 'admin') {
+    return { pin: '0314', name: 'Koke', role: 'admin', short: 'Koke', sessionId: asUid(), loginAt: Date.now() };
+  }
+  return null;
+}
+function openAppAfterGate() {
+  applyRevenueRestrictions();
+  var err = document.getElementById('loginError');
+  if (err) err.style.display = 'none';
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   if (!window._aloraBooted) {
     window._aloraBooted = true;
     initApp();
+  } else {
+    try { asRefreshAfterRoleChange(); } catch (e) {}
   }
+}
+function attemptLogin() {
+  var input = document.getElementById('loginPassword');
+  var err = document.getElementById('loginError');
+  var v = (input && input.value ? input.value : '').trim();
+  var kind = asWelcomeLoginKind(v, getPassword());
+  if (kind === 'reject') {
+    if (err) err.style.display = 'block';
+    return;
+  }
+  asSetSession(asWelcomeSessionForKind(kind));
+  openAppAfterGate();
 }
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 
@@ -1821,6 +1895,7 @@ document.getElementById('loginPassword').addEventListener('keydown', e => { if (
    APP INIT
    ============================================================ */
 function initApp() {
+  applyRevenueRestrictions();
   suppressActivityLog = true;
   initSampleData();
   suppressActivityLog = false;
@@ -1830,6 +1905,7 @@ function initApp() {
   startAutosave();
   initNotifications();
   applyAdminRestrictions();
+  applyRevenueRestrictions();
   startInactivityMonitor();
 }
 
@@ -1851,6 +1927,14 @@ function showSection(name) {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('show');
 
+  if (name === 'recibos' && !asCanSeeRevenue()) {
+    showToast('Recibos solo para Koke (0314)', 'error');
+    name = 'gastos';
+    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('sec-gastos').classList.add('active');
+    document.querySelectorAll('.sidebar nav a, .bottom-nav a').forEach(function(a) { a.classList.remove('active'); });
+    document.querySelectorAll('[data-section="gastos"]').forEach(function(a) { a.classList.add('active'); });
+  }
   if (name === 'dashboard') renderDashboard();
   else if (name === 'tracking') renderTracking();
   else if (name === 'gastos') renderExpenses();
@@ -1900,8 +1984,8 @@ function defaultAsistenciaUsers() {
 }
 function getAsistenciaUsers() {
   var stored = loadData(STORAGE_KEYS.asistenciaPins);
-  if (Array.isArray(stored) && stored.length) return stored;
-  return defaultAsistenciaUsers();
+  var list = (Array.isArray(stored) && stored.length) ? stored : defaultAsistenciaUsers();
+  return list.map(function(u) { return asNormalizeRole(u); });
 }
 function saveAsistenciaUsers(users) { saveData(STORAGE_KEYS.asistenciaPins, users); }
 
@@ -1997,23 +2081,43 @@ function asIsPhone() {
   var smallScreen = Math.min(screen.width, screen.height) <= 500;
   return mobileUA || (touch && smallScreen);
 }
+function asNormalizeRole(u) {
+  if (!u) return u;
+  var pin = String(u.pin || '');
+  var role = String(u.role || '').toLowerCase();
+  if (pin === '2604') {
+    u.role = 'worker';
+  } else if (pin === '0314' || role === 'admin') {
+    u.role = 'admin';
+  } else if (role === 'worker' || role === 'colaboradora' || role === 'trabajadora' || !role) {
+    u.role = 'worker';
+  }
+  return u;
+}
+function asHydrateSessionRole(u) {
+  return asNormalizeRole(u);
+}
 function asCurrentUser() {
   try {
     var u = JSON.parse(localStorage.getItem(AS_SESSION_KEY));
-    if (u) return u;
+    if (u) return asHydrateSessionRole(u);
     u = JSON.parse(sessionStorage.getItem('bvg_asistencia_session'));
     if (u) {
+      u = asHydrateSessionRole(u);
       localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
-      sessionStorage.removeItem('bvg_asistencia_session');
       return u;
     }
   } catch (e) {}
   return null;
 }
 function asSetSession(u) {
-  if (u) localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
-  else localStorage.removeItem(AS_SESSION_KEY);
-  try { sessionStorage.removeItem('bvg_asistencia_session'); } catch (e) {}
+  if (u) {
+    localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
+    try { sessionStorage.setItem('bvg_asistencia_session', JSON.stringify(u)); } catch (e) {}
+  } else {
+    localStorage.removeItem(AS_SESSION_KEY);
+    try { sessionStorage.removeItem('bvg_asistencia_session'); } catch (e) {}
+  }
 }
 function asIsAdminView() {
   var u = asCurrentUser();
@@ -2028,6 +2132,35 @@ function asCanSeeCalendar() {
   if (u && u.role === 'worker') return false;
   return asIsAdminView();
 }
+function asCanSeeRevenue() {
+  var u = asCurrentUser();
+  if (!u) return true;
+  u = asNormalizeRole({ pin: u.pin, role: u.role });
+  return u.role !== 'worker';
+}
+function applyRevenueRestrictions() {
+  var hide = !asCanSeeRevenue();
+  document.body.classList.toggle('hide-income', hide);
+  document.documentElement.classList.toggle('hide-income', hide);
+  document.querySelectorAll('[data-section="recibos"]').forEach(function(el) {
+    el.style.display = hide ? 'none' : '';
+  });
+}
+function asRefreshAfterRoleChange() {
+  applyRevenueRestrictions();
+  try { renderDashboard(); } catch (e) {}
+  try {
+    if (document.getElementById('sec-tracking') && document.getElementById('sec-tracking').classList.contains('active')) renderTracking();
+  } catch (e) {}
+  try {
+    if (document.getElementById('sec-reportes') && document.getElementById('sec-reportes').classList.contains('active')) renderReports();
+  } catch (e) {}
+  try {
+    if (document.getElementById('sec-gastos') && document.getElementById('sec-gastos').classList.contains('active')) renderExpenses();
+  } catch (e) {}
+  try { renderCRM(); } catch (e) {}
+}
+try { applyRevenueRestrictions(); } catch (e) {}
 function asShiftNoteText(s) {
   if (!s) return '';
   if (s.queHice) return String(s.queHice);
@@ -2247,6 +2380,7 @@ function asTryPin() {
   saveAsistenciaAccesos(asUpsertById(getAsistenciaAccesos(), acc));
   if (input) input.value = '';
   renderAsistencia();
+  asRefreshAfterRoleChange();
   showToast('Hola, ' + u.short, 'success');
 }
 
@@ -2266,6 +2400,7 @@ function asLogoutPin() {
   _asDayPhotos = [];
   if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   renderAsistencia();
+  asRefreshAfterRoleChange();
 }
 
 function asActiveShift() {
@@ -2461,7 +2596,7 @@ function asRenderShiftEvents(s) {
     var actions = canFix ? '<div class="as-item-actions"><button type="button" class="btn btn-outline btn-sm" onclick="asEditShiftEvent(\'' + e.id + '\')">Editar</button><button type="button" class="btn btn-outline btn-sm" style="color:var(--red)" onclick="asDeleteShiftEvent(\'' + e.id + '\')">Borrar</button></div>' : '';
     if (e.type === 'client') {
       return '<div class="as-item"><div class="as-item-top"><b>Cliente · ' + esc(e.huesped || '—') + '</b><span class="badge badge-blue">' + esc(e.depto || '—') + '</span></div>' +
-        '<small>' + esc(e.fuente || '—') + ' · ' + esc(e.checkIn || '?') + ' → ' + esc(e.checkOut || '?') + ' · ' + (e.total ? fmtMoney(e.total) : 'sin total') + ' · ' + asFmtDateTime(e.ts) + '</small>' +
+        '<small>' + esc(e.fuente || '—') + ' · ' + esc(e.checkIn || '?') + ' → ' + esc(e.checkOut || '?') + (asCanSeeRevenue() && e.total ? ' · ' + fmtMoney(e.total) : '') + ' · ' + asFmtDateTime(e.ts) + '</small>' +
         (e.notas ? '<small>' + esc(e.notas) + '</small>' : '') + actions + '</div>';
     }
     return '<div class="as-item"><div class="as-item-top"><b>Gasto · ' + esc(e.concepto || '—') + '</b><span class="badge badge-red">' + fmtMoney(e.monto) + '</span></div>' +
@@ -2497,7 +2632,7 @@ function asCfDeptoChange() {
   var d = document.getElementById('asCfDepto').value;
   var nights = document.getElementById('asCfNoches').value;
   var rate = AS_DEPTO_RATES[d];
-  if (rate && nights) document.getElementById('asCfTotal').value = rate * Number(nights);
+  if (asCanSeeRevenue() && rate && nights) document.getElementById('asCfTotal').value = rate * Number(nights);
 }
 function asSaveClient() {
   var s = asActiveShift(); if (!s) { showToast('Sin turno activo', 'error'); return; }
@@ -2513,8 +2648,8 @@ function asSaveClient() {
     var days = (new Date(checkOut) - new Date(checkIn)) / 86400000;
     if (days > 0) noches = Math.round(days);
   }
-  var total = Number(document.getElementById('asCfTotal').value || 0);
-  if (!total && AS_DEPTO_RATES[depto] && noches) total = AS_DEPTO_RATES[depto] * noches;
+  var total = asCanSeeRevenue() ? Number(document.getElementById('asCfTotal').value || 0) : 0;
+  if (asCanSeeRevenue() && !total && AS_DEPTO_RATES[depto] && noches) total = AS_DEPTO_RATES[depto] * noches;
   var notas = document.getElementById('asCfNotas').value.trim();
   if (!huesped) { showToast('Falta el nombre del huésped', 'error'); return; }
   if (!depto) { showToast('Falta el depto', 'error'); return; }
@@ -2764,7 +2899,7 @@ function asRenderAdmin() {
     if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin clientes en este rango.</div>'; return; }
     list.innerHTML = rows.map(function(r) {
       return '<div class="as-item"><div class="as-item-top"><b>' + esc(r.huesped || '—') + '</b><span class="badge badge-blue">' + esc(r.depto || '—') + '</span></div>' +
-        '<small>' + esc(r.fuente || '—') + ' · ' + esc(r.checkIn || '?') + ' → ' + esc(r.checkOut || '?') + ' · ' + (r.noches || 0) + 'n · ' + (r.total ? fmtMoney(r.total) : 'sin total') + '</small>' +
+        '<small>' + esc(r.fuente || '—') + ' · ' + esc(r.checkIn || '?') + ' → ' + esc(r.checkOut || '?') + ' · ' + (r.noches || 0) + 'n' + (asCanSeeRevenue() && r.total ? ' · ' + fmtMoney(r.total) : '') + '</small>' +
         '<small>Registrado por ' + esc(r.userShort || '—') + ' · ' + asFmtDateTime(r.ts) + ' · Encargado: ' + esc(r.encargado || '—') + '</small>' +
         (r.notas ? '<small>' + esc(r.notas) + '</small>' : '') + '</div>';
     }).join('');
@@ -2811,10 +2946,17 @@ function exportAsistenciaCSV() {
     });
     name = 'bvg_accesos.csv';
   } else if (AS_ADMIN_TAB === 'clientes') {
-    headers = ['fecha_registro', 'huesped', 'depto', 'fuente', 'check_in', 'check_out', 'noches', 'total_mxn', 'encargado', 'registrado_por', 'notas', 'cliente_id', 'shift_id'];
-    mapped = rows.map(function(x) {
-      return [asToIsoLocal(x.ts), x.huesped, x.depto, x.fuente, x.checkIn, x.checkOut, x.noches || '', x.total || '', x.encargado, x.userShort || '', x.notas || '', x.id, x.shiftId];
-    });
+    if (asCanSeeRevenue()) {
+      headers = ['fecha_registro', 'huesped', 'depto', 'fuente', 'check_in', 'check_out', 'noches', 'total_mxn', 'encargado', 'registrado_por', 'notas', 'cliente_id', 'shift_id'];
+      mapped = rows.map(function(x) {
+        return [asToIsoLocal(x.ts), x.huesped, x.depto, x.fuente, x.checkIn, x.checkOut, x.noches || '', x.total || '', x.encargado, x.userShort || '', x.notas || '', x.id, x.shiftId];
+      });
+    } else {
+      headers = ['fecha_registro', 'huesped', 'depto', 'fuente', 'check_in', 'check_out', 'noches', 'encargado', 'registrado_por', 'notas', 'cliente_id', 'shift_id'];
+      mapped = rows.map(function(x) {
+        return [asToIsoLocal(x.ts), x.huesped, x.depto, x.fuente, x.checkIn, x.checkOut, x.noches || '', x.encargado, x.userShort || '', x.notas || '', x.id, x.shiftId];
+      });
+    }
     name = 'bvg_asistencia_clientes.csv';
   } else {
     headers = ['fecha_registro', 'concepto', 'monto_mxn', 'categoria', 'depto', 'registrado_por', 'notas', 'gasto_id', 'shift_id'];
@@ -3694,7 +3836,10 @@ function renderDashboard() {
   const collected = allActiveBookings.filter(b => getPaymentProgress(b.anticipo) === 3).reduce((s,b)=>s+(b.total||0),0);
   const pendingRev = totalRevenue - collected;
 
-  document.getElementById('kpiGrid').innerHTML =
+  var seeRev = asCanSeeRevenue();
+  var kpiHtml = '';
+  if (seeRev) {
+    kpiHtml +=
     '<div class="kpi-card kpi-income" data-tooltip="Suma de reservas completadas en 2026" onclick="showSection(\'tracking\')">' +
       '<div class="kpi-label">Ventas 2026</div>' +
       '<div class="kpi-value" style="color:var(--green)">' + fmtMoney(ventas2026) + '</div>' +
@@ -3706,15 +3851,21 @@ function renderDashboard() {
     '<div class="kpi-card" data-tooltip="Tarifa promedio por noche (todas las reservas completadas)">' +
       '<div class="kpi-label">Tarifa Promedio/Noche</div>' +
       '<div class="kpi-value" style="color:var(--teal)">' + fmtMoney(avgRate) + '</div>' +
-    '</div>' +
+    '</div>';
+  }
+  kpiHtml +=
     '<div class="kpi-card kpi-occupancy" data-tooltip="Ocupación '+yr+'" onclick="showSection(\'reportes\')">' +
       '<div class="kpi-label">Tasa de Ocupación '+yr+'</div>' +
       '<div class="kpi-value" style="color:var(--teal)">' + occupancy + '%</div>' +
-    '</div>' +
+    '</div>';
+  if (seeRev) {
+    kpiHtml +=
     '<div class="kpi-card" data-tooltip="Ventas - Gastos 2026">' +
       '<div class="kpi-label">Ingresos Netos 2026</div>' +
       '<div class="kpi-value" style="color:' + (netos >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtMoney(netos) + '</div>' +
-    '</div>' +
+    '</div>';
+  }
+  kpiHtml +=
     '<div class="kpi-card kpi-expense" data-tooltip="Total gastos" onclick="showSection(\'gastos\')">' +
       '<div class="kpi-label">Gastos Totales</div>' +
       '<div class="kpi-value" style="color:var(--orange)">' + fmtMoney(gastosTotal) + '</div>' +
@@ -3726,11 +3877,15 @@ function renderDashboard() {
     '<div class="kpi-card" data-tooltip="Check-ins próximos 7 días" onclick="showSection(\'tracking\')">' +
       '<div class="kpi-label">Próximas Llegadas (7d)</div>' +
       '<div class="kpi-value" style="color:var(--blue)">' + proxLlegadas + '</div>' +
-    '</div>' +
+    '</div>';
+  if (seeRev) {
+    kpiHtml +=
     '<div class="kpi-card kpi-teal" data-tooltip="Ingreso por departamento">' +
       '<div class="kpi-label">1404 Norte / 1401 Sur</div>' +
       '<div class="kpi-value" style="font-size:1rem">' + fmtMoney(norteRev) + ' / ' + fmtMoney(surRev) + '</div>' +
-    '</div>' +
+    '</div>';
+  }
+  kpiHtml +=
     '<div class="kpi-card" data-tooltip="Cancelaciones / Total">' +
       '<div class="kpi-label">Tasa de Cancelación</div>' +
       '<div class="kpi-value" style="color:var(--red)">' + cancelRate + '%</div>' +
@@ -3738,12 +3893,16 @@ function renderDashboard() {
     '<div class="kpi-card" data-tooltip="Promedio de noches por reserva completada">' +
       '<div class="kpi-label">Estancia Promedio</div>' +
       '<div class="kpi-value">' + avgStay + ' noches</div>' +
-    '</div>' +
+    '</div>';
+  if (seeRev) {
+    kpiHtml +=
     '<div class="kpi-card" data-tooltip="Cobrado vs Pendiente">' +
       '<div class="kpi-label">Cobrado / Pendiente</div>' +
       '<div class="kpi-value" style="font-size:1rem;color:var(--green)">' + fmtMoney(collected) + '</div>' +
       '<div class="kpi-sub">Pendiente: ' + fmtMoney(pendingRev) + '</div>' +
     '</div>';
+  }
+  document.getElementById('kpiGrid').innerHTML = kpiHtml;
 
   document.getElementById('quickStats').innerHTML =
     '<div class="stat-pill"><div class="dot" style="background:var(--orange)"></div>En Curso: ' + active + '</div>' +
@@ -3785,7 +3944,7 @@ function renderDashCharts(bookings, expenses) {
     monthlySales25[m] += b.total || 0;
   });
   destroyChart('chartVentasMensuales');
-  chartInstances['chartVentasMensuales'] = new Chart(document.getElementById('chartVentasMensuales'), {
+  if (asCanSeeRevenue()) chartInstances['chartVentasMensuales'] = new Chart(document.getElementById('chartVentasMensuales'), {
     type: 'bar',
     data: {
       labels: months,
@@ -3845,7 +4004,7 @@ function renderDashCharts(bookings, expenses) {
     else surMonthly[m] += b.total || 0;
   });
   destroyChart('chartIngresoDepto');
-  chartInstances['chartIngresoDepto'] = new Chart(document.getElementById('chartIngresoDepto'), {
+  if (asCanSeeRevenue()) chartInstances['chartIngresoDepto'] = new Chart(document.getElementById('chartIngresoDepto'), {
     type: 'bar',
     data: {
       labels: months,
@@ -4076,7 +4235,8 @@ function renderCRM() {
   var activeClients = clients.filter(function(c) { return c.status === 'activo'; }).length;
   var repeatRate = totalClients > 0 ? ((repeatClients / totalClients) * 100).toFixed(1) : '0';
 
-  document.getElementById('crmKPIs').innerHTML =
+  var seeRev = asCanSeeRevenue();
+  var crmHtml =
     '<div class="kpi-card" data-tooltip="Clientes únicos registrados">' +
       '<div class="kpi-label">Total Clientes</div>' +
       '<div class="kpi-value" style="color:var(--blue)">' + totalClients + '</div>' +
@@ -4085,7 +4245,9 @@ function renderCRM() {
       '<div class="kpi-label">Clientes Recurrentes</div>' +
       '<div class="kpi-value" style="color:var(--green)">' + repeatClients + '</div>' +
       '<div class="kpi-sub">' + repeatRate + '% tasa de retención</div>' +
-    '</div>' +
+    '</div>';
+  if (seeRev) {
+    crmHtml +=
     '<div class="kpi-card" data-tooltip="Ingreso promedio generado por cliente">' +
       '<div class="kpi-label">Ingreso/Cliente</div>' +
       '<div class="kpi-value" style="color:var(--teal)">' + fmtMoney(avgRevPerClient) + '</div>' +
@@ -4094,7 +4256,16 @@ function renderCRM() {
       '<div class="kpi-label">Cliente Top</div>' +
       '<div class="kpi-value" style="font-size:1rem;color:var(--yellow)">' + (topClient ? topClient.name : '-') + '</div>' +
       '<div class="kpi-sub">' + (topClient ? fmtMoney(topClient.totalRevenue) + ' en ' + topClient.visitCount + ' visitas' : '') + '</div>' +
-    '</div>' +
+    '</div>';
+  } else if (topClient) {
+    crmHtml +=
+    '<div class="kpi-card" data-tooltip="' + topClient.name + '">' +
+      '<div class="kpi-label">Cliente Top</div>' +
+      '<div class="kpi-value" style="font-size:1rem;color:var(--yellow)">' + topClient.name + '</div>' +
+      '<div class="kpi-sub">' + topClient.visitCount + ' visitas</div>' +
+    '</div>';
+  }
+  crmHtml +=
     '<div class="kpi-card" data-tooltip="Clientes con reservas activas o por llegar">' +
       '<div class="kpi-label">Clientes Activos</div>' +
       '<div class="kpi-value" style="color:var(--orange)">' + activeClients + '</div>' +
@@ -4103,11 +4274,12 @@ function renderCRM() {
       '<div class="kpi-label">Noches/Cliente</div>' +
       '<div class="kpi-value">' + (totalClients > 0 ? (clients.reduce(function(s,c){return s+c.totalNights;},0) / totalClients).toFixed(1) : '0') + '</div>' +
     '</div>';
+  document.getElementById('crmKPIs').innerHTML = crmHtml;
 
   // Top clients bar chart
   var top10 = clients.slice().sort(function(a,b) { return b.totalRevenue - a.totalRevenue; }).slice(0,10);
   destroyChart('chartTopClientes');
-  chartInstances['chartTopClientes'] = new Chart(document.getElementById('chartTopClientes'), {
+  if (seeRev) chartInstances['chartTopClientes'] = new Chart(document.getElementById('chartTopClientes'), {
     type: 'bar',
     data: {
       labels: top10.map(function(c) { return c.name.length > 15 ? c.name.substring(0,15) + '…' : c.name; }),
@@ -4155,6 +4327,7 @@ function renderCrmClientes() {
   var clients = getCrmClientData();
   var search = (document.getElementById('crmSearch').value || '').toLowerCase();
   var sortBy = document.getElementById('crmSortBy').value;
+  if (!asCanSeeRevenue() && sortBy === 'revenue') sortBy = 'visits';
 
   if (search) {
     clients = clients.filter(function(c) { return c.name.toLowerCase().includes(search); });
@@ -4170,8 +4343,9 @@ function renderCrmClientes() {
     clients.sort(function(a,b) { return a.name.localeCompare(b.name); });
   }
 
+  var seeRev = asCanSeeRevenue();
   var html = '<div class="crm-client-header">' +
-    '<div>Cliente</div><div>Visitas</div><div>Ingresos</div><div>Última Visita</div><div>Depto</div><div>Tipo</div>' +
+    '<div>Cliente</div><div>Visitas</div>' + (seeRev ? '<div>Ingresos</div>' : '') + '<div>Última Visita</div><div>Depto</div><div>Tipo</div>' +
   '</div>';
 
   clients.forEach(function(c) {
@@ -4187,7 +4361,7 @@ function renderCrmClientes() {
     html += '<div class="crm-client-row" onclick="openClientModal(\'' + c.name.replace(/'/g, "\\'") + '\')">' +
       '<div class="client-name"><div class="avatar" style="background:' + color + '">' + c.initials + '</div>' + c.name + '</div>' +
       '<div data-label="Visitas">' + c.visitCount + '</div>' +
-      '<div data-label="Ingresos" style="color:var(--green)">' + fmtMoney(c.totalRevenue) + '</div>' +
+      (seeRev ? '<div data-label="Ingresos" style="color:var(--green)">' + fmtMoney(c.totalRevenue) + '</div>' : '') +
       '<div data-label="Última Visita">' + lastDate + '</div>' +
       '<div data-label="Depto">' + c.preferredDepto + '</div>' +
       '<div>' + tagHtml + '</div>' +
@@ -4217,7 +4391,7 @@ function renderCrmPipeline() {
       var d = b[dateField] || '';
       return '<div class="pipeline-card" onclick="openClientModal(\'' + (b.rent || '').replace(/'/g, "\\'") + '\')">' +
         '<div class="pc-name">' + (b.rent || '-') + '</div>' +
-        '<div class="pc-meta">' + (b.depto || '') + ' · ' + d + ' · ' + fmtMoney(b.total || 0) + '</div>' +
+        '<div class="pc-meta">' + (b.depto || '') + ' · ' + d + (asCanSeeRevenue() ? ' · ' + fmtMoney(b.total || 0) : '') + '</div>' +
       '</div>';
     }).join('');
   }
@@ -4262,7 +4436,7 @@ function openClientModal(clientName) {
     else if (b.status === 'CANCELADA') statusColor = 'var(--red)';
     return '<div class="cm-booking-row">' +
       '<div><span style="color:' + statusColor + ';font-weight:600">' + b.status + '</span> · ' + (b.depto || '-') + '</div>' +
-      '<div style="text-align:right">' + (b.entrada || '-') + ' → ' + (b.salida || '-') + ' · <strong>' + fmtMoney(b.total || 0) + '</strong></div>' +
+      '<div style="text-align:right">' + (b.entrada || '-') + ' → ' + (b.salida || '-') + (asCanSeeRevenue() ? ' · <strong>' + fmtMoney(b.total || 0) + '</strong>' : '') + '</div>' +
     '</div>';
   }).join('');
 
@@ -4278,11 +4452,11 @@ function openClientModal(clientName) {
       '<button class="cm-close" onclick="closeClientModal()">✕ Cerrar</button>' +
     '</div>' +
     '<div class="cm-stats-grid">' +
-      '<div class="cm-stat"><div class="cm-stat-val" style="color:var(--green)">' + fmtMoney(client.totalRevenue) + '</div><div class="cm-stat-lbl">Ingresos Totales</div></div>' +
+      (asCanSeeRevenue() ? '<div class="cm-stat"><div class="cm-stat-val" style="color:var(--green)">' + fmtMoney(client.totalRevenue) + '</div><div class="cm-stat-lbl">Ingresos Totales</div></div>' : '') +
       '<div class="cm-stat"><div class="cm-stat-val" style="color:var(--blue)">' + client.visitCount + '</div><div class="cm-stat-lbl">Visitas</div></div>' +
       '<div class="cm-stat"><div class="cm-stat-val">' + client.totalNights + '</div><div class="cm-stat-lbl">Noches Totales</div></div>' +
-      '<div class="cm-stat"><div class="cm-stat-val" style="color:var(--teal)">' + fmtMoney(client.avgPerVisit) + '</div><div class="cm-stat-lbl">Prom/Visita</div></div>' +
-      '<div class="cm-stat"><div class="cm-stat-val">' + fmtMoney(client.avgPerNight) + '</div><div class="cm-stat-lbl">Prom/Noche</div></div>' +
+      (asCanSeeRevenue() ? '<div class="cm-stat"><div class="cm-stat-val" style="color:var(--teal)">' + fmtMoney(client.avgPerVisit) + '</div><div class="cm-stat-lbl">Prom/Visita</div></div>' +
+      '<div class="cm-stat"><div class="cm-stat-val">' + fmtMoney(client.avgPerNight) + '</div><div class="cm-stat-lbl">Prom/Noche</div></div>' : '') +
       '<div class="cm-stat"><div class="cm-stat-val">' + client.preferredDepto + '</div><div class="cm-stat-lbl">Depto Preferido</div></div>' +
     '</div>' +
     '<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.5rem">Fuentes: ' + fuentesList + '</div>' +
@@ -4325,9 +4499,10 @@ function renderTracking() {
   // Running total
   const filteredRevenue = filtered.reduce((s, b) => s + (b.total || 0), 0);
   const filteredNights = filtered.reduce((s, b) => s + daysBetween(b.entrada, b.salida), 0);
+  var seeRev = asCanSeeRevenue();
   document.getElementById('trackingRunningTotal').innerHTML =
     '<span>Resultados: <strong>' + total + '</strong></span>' +
-    '<span>Total: <strong>' + fmtMoney(filteredRevenue) + '</strong></span>' +
+    (seeRev ? '<span>Total: <strong>' + fmtMoney(filteredRevenue) + '</strong></span>' : '') +
     '<span>Noches: <strong>' + filteredNights + '</strong></span>';
 
   const tbody = document.getElementById('trackingBody');
@@ -4350,22 +4525,22 @@ function renderTracking() {
       '<td>' + esc(b.depto) + '</td>' +
       '<td>' + nights + '</td>' +
       '<td>' + esc(b.fuente) + '</td>' +
-      '<td style="font-weight:600">' + fmtMoney(b.total) + starIcon + '</td>' +
-      '<td>' + paymentProgressBar(b.anticipo) + '</td>' +
+      (seeRev ? '<td style="font-weight:600">' + fmtMoney(b.total) + starIcon + '</td>' +
+      '<td>' + paymentProgressBar(b.anticipo) + '</td>' : '') +
       '<td>' + statusBadgeClickable(b.status, b.id) + '</td>' +
       '<td>' + esc(b.encargado) + '</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();editBooking(' + b.id + ')" title="Editar">✏️</button> ' +
-        '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();goToReceiptFromBooking(' + b.id + ')" title="Generar Recibo" style="color:var(--green)">🧾</button> ' +
+        (seeRev ? '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();goToReceiptFromBooking(' + b.id + ')" title="Generar Recibo" style="color:var(--green)">🧾</button> ' : '') +
         '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();deleteBooking(' + b.id + ')" title="Eliminar" style="color:var(--red)">🗑</button>' +
       '</td>' +
     '</tr>';
     if (isExpanded) {
-      html += '<tr class="row-detail"><td colspan="12"><div class="detail-grid">' +
-        '<div><label>Limpieza</label>' + (b.lim ? fmtMoney(b.lim) : '—') + '</div>' +
+      html += '<tr class="row-detail"><td colspan="' + (seeRev ? 12 : 10) + '"><div class="detail-grid">' +
+        (seeRev ? '<div><label>Limpieza</label>' + (b.lim ? fmtMoney(b.lim) : '—') + '</div>' : '') +
         '<div><label>Booking #</label>' + esc(b.book || '—') + '</div>' +
         '<div><label>Notas</label>' + esc(b.notas || '—') + '</div>' +
-        '<div><label>Precio especial</label>' + (b.specialPrice ? fmtMoney(b.specialRate) + '/noche' : 'No') + '</div>' +
+        (seeRev ? '<div><label>Precio especial</label>' + (b.specialPrice ? fmtMoney(b.specialRate) + '/noche' : 'No') + '</div>' : '') +
       '</div></td></tr>';
     }
   });
@@ -4386,8 +4561,8 @@ function renderTracking() {
       '<td colspan="5"><span class="total-label">TOTAL (' + total + ' reservas filtradas)</span></td>' +
       '<td><span class="total-value">' + filteredNights + ' noches</span></td>' +
       '<td></td>' +
-      '<td><span class="total-value">' + fmtMoney(filteredRevenue) + '</span></td>' +
-      '<td><span class="total-value" style="font-size:.8rem">' + fmtMoney(footAnticipo) + '</span></td>' +
+      (seeRev ? '<td><span class="total-value">' + fmtMoney(filteredRevenue) + '</span></td>' +
+      '<td><span class="total-value" style="font-size:.8rem">' + fmtMoney(footAnticipo) + '</span></td>' : '') +
       '<td colspan="3"></td>' +
     '</tr>';
 }
@@ -5211,7 +5386,7 @@ function renderReports() {
   });
 
   destroyChart('chartIngGast');
-  chartInstances['chartIngGast'] = new Chart(document.getElementById('chartIngGast'), {
+  if (asCanSeeRevenue()) chartInstances['chartIngGast'] = new Chart(document.getElementById('chartIngGast'), {
     type: 'bar',
     data: {
       labels: months,
@@ -5269,7 +5444,7 @@ function renderReports() {
     rev2026[m] += b.total || 0;
   });
   destroyChart('chartYoY');
-  chartInstances['chartYoY'] = new Chart(document.getElementById('chartYoY'), {
+  if (asCanSeeRevenue()) chartInstances['chartYoY'] = new Chart(document.getElementById('chartYoY'), {
     type: 'line',
     data: {
       labels: months,
@@ -5306,7 +5481,7 @@ function renderReports() {
   });
 
   destroyChart('chartADR');
-  chartInstances['chartADR'] = new Chart(document.getElementById('chartADR'), {
+  if (asCanSeeRevenue()) chartInstances['chartADR'] = new Chart(document.getElementById('chartADR'), {
     type: 'line',
     data: {
       labels: months,
@@ -5331,17 +5506,19 @@ function renderReports() {
     clientRevenue[b.rent] = (clientRevenue[b.rent] || 0) + (b.total || 0);
   });
   const top5 = Object.entries(clientRevenue).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  document.getElementById('topClients').innerHTML = '<table><thead><tr><th>#</th><th>Cliente</th><th>Ingreso Total</th><th>Reservas</th></tr></thead><tbody>' +
-    top5.map((t, i) => {
-      const count = completed.filter(b => b.rent === t[0]).length;
-      return '<tr><td>' + (i+1) + '</td><td><strong>' + esc(t[0]) + '</strong></td><td style="font-weight:600">' + fmtMoney(t[1]) + '</td><td>' + count + '</td></tr>';
-    }).join('') + '</tbody></table>';
+  if (asCanSeeRevenue()) {
+    document.getElementById('topClients').innerHTML = '<table><thead><tr><th>#</th><th>Cliente</th><th>Ingreso Total</th><th>Reservas</th></tr></thead><tbody>' +
+      top5.map((t, i) => {
+        const count = completed.filter(b => b.rent === t[0]).length;
+        return '<tr><td>' + (i+1) + '</td><td><strong>' + esc(t[0]) + '</strong></td><td style="font-weight:600">' + fmtMoney(t[1]) + '</td><td>' + count + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
 
   // Longest bookings
   const sorted = [...completed].sort((a,b) => daysBetween(b.entrada, b.salida) - daysBetween(a.entrada, a.salida)).slice(0, 5);
-  document.getElementById('longestBookings').innerHTML = '<table><thead><tr><th>#</th><th>Cliente</th><th>Noches</th><th>Depto</th><th>Total</th></tr></thead><tbody>' +
+  document.getElementById('longestBookings').innerHTML = '<table><thead><tr><th>#</th><th>Cliente</th><th>Noches</th><th>Depto</th>' + (asCanSeeRevenue() ? '<th>Total</th>' : '') + '</tr></thead><tbody>' +
     sorted.map((b, i) =>
-      '<tr><td>' + (i+1) + '</td><td><strong>' + esc(b.rent) + '</strong></td><td>' + daysBetween(b.entrada, b.salida) + '</td><td>' + esc(b.depto) + '</td><td>' + fmtMoney(b.total) + '</td></tr>'
+      '<tr><td>' + (i+1) + '</td><td><strong>' + esc(b.rent) + '</strong></td><td>' + daysBetween(b.entrada, b.salida) + '</td><td>' + esc(b.depto) + '</td>' + (asCanSeeRevenue() ? '<td>' + fmtMoney(b.total) + '</td>' : '') + '</tr>'
     ).join('') + '</tbody></table>';
 
   // KPI by apartment
@@ -5354,7 +5531,10 @@ function renderReports() {
   const norteAvg = norteNightsAll ? Math.round(norteRev / norteNightsAll) : 0;
   const surAvg = surNightsAll ? Math.round(surRev / surNightsAll) : 0;
 
-  document.getElementById('reportKPIs').innerHTML =
+  var seeRev = asCanSeeRevenue();
+  var reportHtml = '';
+  if (seeRev) {
+    reportHtml +=
     '<div class="kpi-card" style="border-left:3px solid #FF385C">' +
       '<div class="kpi-label">1404 Norte — Ingresos</div><div class="kpi-value">' + fmtMoney(norteRev) + '</div>' +
       '<div class="kpi-sub">' + norteNightsAll + ' noches · Promedio: ' + fmtMoney(norteAvg) + '/noche</div>' +
@@ -5362,7 +5542,17 @@ function renderReports() {
     '<div class="kpi-card" style="border-left:3px solid #a855f7">' +
       '<div class="kpi-label">1401 Sur — Ingresos</div><div class="kpi-value">' + fmtMoney(surRev) + '</div>' +
       '<div class="kpi-sub">' + surNightsAll + ' noches · Promedio: ' + fmtMoney(surAvg) + '/noche</div>' +
+    '</div>';
+  } else {
+    reportHtml +=
+    '<div class="kpi-card" style="border-left:3px solid #FF385C">' +
+      '<div class="kpi-label">1404 Norte — Noches</div><div class="kpi-value">' + norteNightsAll + '</div>' +
     '</div>' +
+    '<div class="kpi-card" style="border-left:3px solid #a855f7">' +
+      '<div class="kpi-label">1401 Sur — Noches</div><div class="kpi-value">' + surNightsAll + '</div>' +
+    '</div>';
+  }
+  reportHtml +=
     '<div class="kpi-card">' +
       '<div class="kpi-label">Reservas Completadas</div><div class="kpi-value">' + (norteCompleted.length + surCompleted.length) + '</div>' +
       '<div class="kpi-sub">Norte: ' + norteCompleted.length + ' · Sur: ' + surCompleted.length + '</div>' +
@@ -5371,6 +5561,7 @@ function renderReports() {
       '<div class="kpi-label">Ocupación ' + yr + '</div><div class="kpi-value" style="color:var(--teal)">' + (((norteNights + surNights) / 730) * 100).toFixed(1) + '%</div>' +
       '<div class="kpi-sub">Norte: ' + ((norteNights / 365) * 100).toFixed(1) + '% · Sur: ' + ((surNights / 365) * 100).toFixed(1) + '%</div>' +
     '</div>';
+  document.getElementById('reportKPIs').innerHTML = reportHtml;
 }
 
 /* ============================================================
@@ -5380,11 +5571,12 @@ function renderConfig() {
   const settings = getSettings();
 
   // Apartments
+  var seeRev = asCanSeeRevenue();
   document.getElementById('cfgApts').innerHTML = settings.apartments.map((a, i) =>
     '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">' +
       '<input type="text" value="' + a.label + '" style="flex:1" onchange="updateAptLabel(' + i + ', this.value)">' +
-      '<input type="number" value="' + a.basePrice + '" style="width:100px" onchange="updateAptPrice(' + i + ', this.value)">' +
-      '<span style="font-size:.75rem;color:var(--text-muted)">MXN/noche</span>' +
+      (seeRev ? '<input type="number" value="' + a.basePrice + '" style="width:100px" onchange="updateAptPrice(' + i + ', this.value)">' +
+      '<span style="font-size:.75rem;color:var(--text-muted)">MXN/noche</span>' : '') +
     '</div>'
   ).join('');
 
@@ -5404,7 +5596,7 @@ function renderConfig() {
   const sp = settings.specialPrices || [];
   document.getElementById('cfgSpecialPrices').innerHTML = sp.length ? sp.map((s, i) =>
     '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem">' +
-      '<span style="flex:1;font-size:.85rem"><strong>' + esc(s.client) + '</strong> — ' + fmtMoney(s.rate) + '/noche</span>' +
+      '<span style="flex:1;font-size:.85rem"><strong>' + esc(s.client) + '</strong>' + (asCanSeeRevenue() ? ' — ' + fmtMoney(s.rate) + '/noche' : '') + '</span>' +
       '<button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="removeSpecialPrice(' + i + ')">🗑</button>' +
     '</div>'
   ).join('') : '<div style="color:var(--text-muted);font-size:.85rem">Sin precios especiales configurados</div>';
@@ -5482,7 +5674,21 @@ function changePassword() {
 /* ============================================================
    EXPORT / IMPORT
    ============================================================ */
+function asBookingsWithoutIncome(list) {
+  return (list || []).map(function(b) {
+    var c = {};
+    Object.keys(b).forEach(function(k) {
+      if (k === 'total' || k === 'anticipo' || k === 'lim' || k === 'specialRate' || k === 'specialPrice') return;
+      c[k] = b[k];
+    });
+    return c;
+  });
+}
 function exportAllJSON() {
+  if (!asCanSeeRevenue()) {
+    showToast('El backup completo es solo para Koke (0314)', 'error');
+    return;
+  }
   const data = {
     bookings: getBookings(),
     expenses: getExpenses(),
@@ -5506,12 +5712,12 @@ function exportAllJSON() {
   logActivity('export', 'Exportación completa', 'Backup JSON generado');
 }
 
-function exportTrackingCSV() { exportCSV(getFilteredBookings(), 'reservas'); }
-function exportTrackingJSON() { downloadFile(JSON.stringify(getFilteredBookings(), null, 2), 'reservas.json', 'application/json'); }
+function exportTrackingCSV() { exportCSV(asCanSeeRevenue() ? getFilteredBookings() : asBookingsWithoutIncome(getFilteredBookings()), 'reservas'); }
+function exportTrackingJSON() { downloadFile(JSON.stringify(asCanSeeRevenue() ? getFilteredBookings() : asBookingsWithoutIncome(getFilteredBookings()), null, 2), 'reservas.json', 'application/json'); }
 function exportExpensesCSV() { exportCSV(getFilteredExpenses(), 'gastos'); }
 function exportExpensesJSON() { downloadFile(JSON.stringify(getFilteredExpenses(), null, 2), 'gastos.json', 'application/json'); }
 function exportAllCSV() {
-  exportCSV(getBookings(), 'todas-reservas');
+  exportCSV(asCanSeeRevenue() ? getBookings() : asBookingsWithoutIncome(getBookings()), 'todas-reservas');
   setTimeout(() => exportCSV(getExpenses(), 'todos-gastos'), 500);
 }
 
@@ -6086,6 +6292,13 @@ function renderActivityFeed() {
   var container = document.getElementById('activityFeed');
   // Filter
   var filtered = currentActivityFilter === 'all' ? log : log.filter(function(e) { return e.type === currentActivityFilter; });
+  if (!asCanSeeRevenue()) {
+    if (currentActivityFilter === 'receipt') {
+      container.innerHTML = '<div class="activity-empty"><p>Recibos solo para Koke (0314).</p></div>';
+      return;
+    }
+    filtered = filtered.filter(function(e) { return e.type !== 'receipt'; });
+  }
   if (filtered.length === 0) {
     container.innerHTML = '<div class="activity-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><p>No hay actividad' + (currentActivityFilter !== 'all' ? ' de este tipo' : '') + ' registrada.</p></div>';
     return;
@@ -6211,6 +6424,10 @@ function logoutSession() {
   sessionStorage.removeItem('bvg_admin_active');
   sessionStorage.removeItem('bvg_asistencia_session');
   localStorage.removeItem('bvg_last_login');
+  localStorage.removeItem('bvg_activa_session');
+  try { asSetSession(null); } catch (e) {}
+  document.documentElement.classList.remove('hide-income');
+  document.body.classList.remove('hide-income');
   _sessionActive = false;
   // Stop timers
   clearInactivityTimers();
@@ -6219,6 +6436,8 @@ function logoutSession() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = '';
   document.getElementById('loginPassword').value = '';
+  var err = document.getElementById('loginError');
+  if (err) err.style.display = 'none';
   // Close any open sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
   var overlay = document.getElementById('overlay');
@@ -6281,19 +6500,6 @@ function dismissTimeout() {
   }
 }
 
-// Password gate temporarily removed — always open the dashboard.
-(function(){
-  try { localStorage.setItem('bvg_last_login', Date.now().toString()); } catch (e) {}
-  var login = document.getElementById('loginScreen');
-  var app = document.getElementById('app');
-  if (login) login.style.display = 'none';
-  if (app) app.style.display = 'block';
-  if (!window._aloraBooted && typeof initApp === 'function') {
-    window._aloraBooted = true;
-    initApp();
-  }
-})();
-
 // Fix iOS 100vh issue
 function fixMobileVH() {
   var vh = window.innerHeight * 0.01;
@@ -6301,19 +6507,6 @@ function fixMobileVH() {
 }
 fixMobileVH();
 window.addEventListener('resize', fixMobileVH);
-</script>
-<script>
-/* Safety net: hide login even if the dashboard script above failed to parse. */
-(function () {
-  var login = document.getElementById('loginScreen');
-  var app = document.getElementById('app');
-  if (login) login.style.display = 'none';
-  if (app) app.style.display = 'block';
-  if (!window._aloraBooted && typeof initApp === 'function') {
-    window._aloraBooted = true;
-    try { initApp(); } catch (e) { console.error(e); }
-  }
-})();
 </script>
 
 <!-- Client Detail Modal -->
