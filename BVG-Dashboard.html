@@ -607,6 +607,46 @@ function aloraApplyWindowSeason() {
 
         <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
 
+        <div id="asAdmin" style="display:none">
+          <div class="settings-card">
+            <h3>Panel de administración — Todos los turnos</h3>
+            <p class="as-muted">Tabla de Entrar / Salir / horas de cada colaboradora (pausas descontadas). También accesos, clientes y gastos del checador.</p>
+            <div class="as-tabs" id="asAdminTabs">
+              <button type="button" class="as-tab" data-as-tab="resumen" onclick="asSwitchTab('resumen')">Resumen</button>
+              <button type="button" class="as-tab active" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
+              <button type="button" class="as-tab" data-as-tab="calendario" id="asTabCalendario" onclick="asSwitchTab('calendario')">Calendario</button>
+              <button type="button" class="as-tab" data-as-tab="tareas" onclick="asSwitchTab('tareas')">Tareas</button>
+              <button type="button" class="as-tab" data-as-tab="extra" onclick="asSwitchTab('extra')">Tiempo extra</button>
+              <button type="button" class="as-tab" data-as-tab="nomina" id="asTabNomina" onclick="asSwitchTab('nomina')">Nómina</button>
+              <button type="button" class="as-tab" data-as-tab="peticiones" onclick="asSwitchTab('peticiones')">Peticiones</button>
+              <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
+              <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
+              <button type="button" class="as-tab" data-as-tab="gastos" onclick="asSwitchTab('gastos')">Gastos</button>
+            </div>
+            <div class="as-filterbar">
+              <input type="date" id="asFltFrom" onchange="asRenderAdmin()">
+              <input type="date" id="asFltTo" onchange="asRenderAdmin()">
+            </div>
+            <div class="as-filterbar" id="asFltRow2" style="display:none">
+              <select id="asFltDepto" onchange="asRenderAdmin()">
+                <option value="">Todos los deptos</option>
+                <option value="1401 Sur">1401 Sur</option>
+                <option value="1404 Norte">1404 Norte</option>
+                <option value="1204 Norte">1204 Norte</option>
+              </select>
+              <select id="asFltFuente" onchange="asRenderAdmin()">
+                <option value="">Todas las fuentes</option>
+                <option>Airbnb</option><option>Directo</option><option>Vanesa</option>
+                <option>David</option><option>Miris</option><option>Otro</option>
+              </select>
+            </div>
+            <div style="margin:.5rem 0 1rem">
+              <button type="button" class="btn btn-outline" id="asCsvBtn" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
+            </div>
+            <div id="asAdminList" class="as-list"></div>
+          </div>
+        </div>
+
         <div id="asWorker" style="display:none">
           <div id="asWorkerHome">
             <div class="settings-card">
@@ -740,46 +780,6 @@ function aloraApplyWindowSeason() {
               <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asGoOffShift()">Volver al inicio</button>
               <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cerrar sesión</button>
             </div>
-          </div>
-        </div>
-
-        <div id="asAdmin" style="display:none">
-          <div class="settings-card">
-            <h3>Panel de administración — Todos los turnos</h3>
-            <p class="as-muted">Entrar y Salir con hora exacta de Valeria (y cualquier otro PIN). También accesos, clientes y gastos del checador.</p>
-            <div class="as-tabs" id="asAdminTabs">
-              <button type="button" class="as-tab active" data-as-tab="resumen" onclick="asSwitchTab('resumen')">Resumen</button>
-              <button type="button" class="as-tab" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
-              <button type="button" class="as-tab" data-as-tab="calendario" id="asTabCalendario" onclick="asSwitchTab('calendario')">Calendario</button>
-              <button type="button" class="as-tab" data-as-tab="tareas" onclick="asSwitchTab('tareas')">Tareas</button>
-              <button type="button" class="as-tab" data-as-tab="extra" onclick="asSwitchTab('extra')">Tiempo extra</button>
-              <button type="button" class="as-tab" data-as-tab="nomina" id="asTabNomina" onclick="asSwitchTab('nomina')">Nómina</button>
-              <button type="button" class="as-tab" data-as-tab="peticiones" onclick="asSwitchTab('peticiones')">Peticiones</button>
-              <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
-              <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
-              <button type="button" class="as-tab" data-as-tab="gastos" onclick="asSwitchTab('gastos')">Gastos</button>
-            </div>
-            <div class="as-filterbar">
-              <input type="date" id="asFltFrom" onchange="asRenderAdmin()">
-              <input type="date" id="asFltTo" onchange="asRenderAdmin()">
-            </div>
-            <div class="as-filterbar" id="asFltRow2" style="display:none">
-              <select id="asFltDepto" onchange="asRenderAdmin()">
-                <option value="">Todos los deptos</option>
-                <option value="1401 Sur">1401 Sur</option>
-                <option value="1404 Norte">1404 Norte</option>
-                <option value="1204 Norte">1204 Norte</option>
-              </select>
-              <select id="asFltFuente" onchange="asRenderAdmin()">
-                <option value="">Todas las fuentes</option>
-                <option>Airbnb</option><option>Directo</option><option>Vanesa</option>
-                <option>David</option><option>Miris</option><option>Otro</option>
-              </select>
-            </div>
-            <div style="margin:.5rem 0 1rem">
-              <button type="button" class="btn btn-outline" id="asCsvBtn" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
-            </div>
-            <div id="asAdminList" class="as-list"></div>
           </div>
         </div>
       </div>
@@ -1888,6 +1888,7 @@ function attemptLogin() {
   }
   asSetSession(asWelcomeSessionForKind(kind));
   openAppAfterGate();
+  try { renderAsistencia(); } catch (e) {}
 }
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 
@@ -1965,7 +1966,8 @@ var AS_DAY_CHIPS = ['Cliente', 'WhatsApp', 'Limpieza coord', 'Recados', 'Visita 
 var AS_FOTO_MAX = 6;
 var AS_FOTO_MAX_EDGE = 1280;
 var AS_FOTO_QUALITY = 0.7;
-var AS_ADMIN_TAB = 'resumen';
+var AS_ADMIN_TAB = 'turnos';
+var AS_WEEK_TARGET_H = 40;
 var AS_SESSION_KEY = 'bvg_activa_session';
 var AS_SHIFT_KEY = 'bvg_activa_shift';
 var _asTimerInt = null;
@@ -2159,6 +2161,7 @@ function asRefreshAfterRoleChange() {
     if (document.getElementById('sec-gastos') && document.getElementById('sec-gastos').classList.contains('active')) renderExpenses();
   } catch (e) {}
   try { renderCRM(); } catch (e) {}
+  try { renderAsistencia(); } catch (e) {}
 }
 try { applyRevenueRestrictions(); } catch (e) {}
 function asShiftNoteText(s) {
@@ -2285,6 +2288,42 @@ function asWorkedMs(s, until) {
   if (!s || !s.startedAt) return 0;
   var end = s.endedAt || until || Date.now();
   return Math.max(0, end - s.startedAt - asPauseMs(s, end));
+}
+function asShiftEstado(s) {
+  if (!s || s.endedAt) return { key: 'cerrado', label: 'cerrado', badge: 'badge-green' };
+  if (asIsPaused(s)) return { key: 'pausa', label: 'pausa', badge: 'badge-orange' };
+  return { key: 'curso', label: 'en curso', badge: 'badge-orange' };
+}
+function asTodayBounds(now) {
+  var d = now ? new Date(now) : new Date();
+  var from = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  var to = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  return { from: from, to: to };
+}
+function asTodayHoursMs(pin) {
+  var b = asTodayBounds(new Date());
+  return asShiftsInRange(pin, b.from, b.to).reduce(function(a, s) { return a + asWorkedMs(s); }, 0);
+}
+function asWeekHoursMs(pin) {
+  var now = new Date();
+  return asShiftsInRange(pin, asWeekStart(now), now).reduce(function(a, s) { return a + asWorkedMs(s); }, 0);
+}
+function asAdminTurnosKpis(rows) {
+  var now = new Date();
+  var today = asTodayBounds(now);
+  var week0 = asWeekStart(now);
+  var todayMs = 0, weekMs = 0, rangeMs = 0, openN = 0;
+  (getAsistenciaShifts() || []).forEach(function(s) {
+    if (!s || !s.startedAt) return;
+    var ms = asWorkedMs(s, s.endedAt || Date.now());
+    if (s.startedAt >= today.from.getTime() && s.startedAt <= today.to.getTime()) todayMs += ms;
+    if (s.startedAt >= week0.getTime() && s.startedAt <= now.getTime()) weekMs += ms;
+    if (!s.endedAt) openN++;
+  });
+  (rows || []).forEach(function(s) {
+    rangeMs += asWorkedMs(s, s.endedAt || Date.now());
+  });
+  return { todayMs: todayMs, weekMs: weekMs, rangeMs: rangeMs, openN: openN };
 }
 function asHasDayReport(s) {
   return !!(s && s.dayReport && s.dayReport.savedAt && s.dayReport.chips && s.dayReport.chips.length);
@@ -2783,13 +2822,16 @@ function asConfirmAdminClose() {
   showToast('Salida registrada', 'success');
 }
 
+function asSyncAdminTabUi() {
+  document.querySelectorAll('#asAdminTabs .as-tab').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-as-tab') === AS_ADMIN_TAB);
+  });
+}
 function asSwitchTab(t) {
   if (t === 'nomina' && !asCanSeePayroll()) { showToast('Nómina solo para Koke (0314)', 'error'); return; }
   if (t === 'calendario' && !asCanSeeCalendar()) { showToast('Calendario solo para Koke (0314)', 'error'); return; }
   AS_ADMIN_TAB = t;
-  document.querySelectorAll('#asAdminTabs .as-tab').forEach(function(el) {
-    el.classList.toggle('active', el.getAttribute('data-as-tab') === t);
-  });
+  asSyncAdminTabUi();
   var filters = document.getElementById('asFltRow2');
   var range = document.querySelector('#asAdmin .as-filterbar');
   var csvBtn = document.querySelector('#asAdmin .btn.btn-outline');
@@ -2857,32 +2899,7 @@ function asRenderAdmin() {
   if (AS_ADMIN_TAB === 'nomina') { asRenderAdminNomina(list); return; }
   if (AS_ADMIN_TAB === 'peticiones') { asRenderAdminPets(list); return; }
   if (AS_ADMIN_TAB === 'turnos') {
-    if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin turnos en este rango.</div>'; return; }
-    list.innerHTML = rows.map(function(s) {
-      var open = !s.endedAt;
-      var paused = asIsPaused(s);
-      var hrsMs = asWorkedMs(s, s.endedAt || Date.now());
-      var ev = asShiftEvents(s);
-      var clientes = ev.filter(function(e) { return e && e.type === 'client'; }).length;
-      var gastos = ev.filter(function(e) { return e && e.type === 'expense'; }).reduce(function(a, e) { return a + Number(e.monto || 0); }, 0);
-      var numGastos = ev.filter(function(e) { return e && e.type === 'expense'; }).length;
-      var pauseN = asPauses(s).length;
-      var st = open ? (paused ? '⏸ pausa' : '● en curso') : asFmtDur(hrsMs);
-      return '<div class="as-item" onclick="asOpenShiftDetail(\'' + s.id + '\',true)" style="cursor:pointer"><div class="as-item-top"><b>' + esc(s.userShort || s.userName || '—') + '</b><span class="badge ' + (open ? 'badge-orange' : 'badge-green') + '">' + st + '</span></div>' +
-        '<div class="as-grid2">' +
-        '<small><b>Fecha:</b> ' + asFmtDate(s.startedAt) + '</small>' +
-        '<small><b>Duración:</b> ' + (open && !s.endedAt ? asFmtDur(hrsMs) + ' (en curso)' : asFmtDur(hrsMs)) + ' <i>sin pausas</i></small>' +
-        '<small><b>Entrar:</b> ' + asFmtDateTime(s.startedAt) + '</small>' +
-        '<small><b>Salir:</b> ' + (s.endedAt ? asFmtDateTime(s.endedAt) : '—') + '</small>' +
-        '<small><b>Clientes:</b> ' + clientes + '</small>' +
-        '<small><b>Gastos:</b> ' + numGastos + ' · ' + fmtMoney(gastos) + '</small>' +
-        '</div>' +
-        (pauseN ? '<small>Pausas: ' + pauseN + ' · ' + asFmtDur(asPauseMs(s, s.endedAt || Date.now())) + '</small>' : '') +
-        (asShiftNoteText(s) ? '<small><b>Hoy:</b> ' + esc(asShiftNoteText(s)) + '</small>' : '') +
-        (asShiftFotos(s).length ? '<small>' + asShiftFotos(s).length + ' foto' + (asShiftFotos(s).length === 1 ? '' : 's') + '</small>' : '') +
-        (open ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button>' : '') +
-        '</div>';
-    }).join('');
+    asRenderAdminTurnos(list, rows);
   } else if (AS_ADMIN_TAB === 'accesos') {
     if (!rows.length) { list.innerHTML = '<div class="as-empty">Sin accesos en este rango.</div>'; return; }
     list.innerHTML = rows.map(function(a) {
@@ -3009,9 +3026,12 @@ function renderAsistencia() {
   if (nomTab) nomTab.style.display = asCanSeePayroll() ? '' : 'none';
   var calTab = document.getElementById('asTabCalendario');
   if (calTab) calTab.style.display = asCanSeeCalendar() ? '' : 'none';
-  if (!asCanSeePayroll() && AS_ADMIN_TAB === 'nomina') AS_ADMIN_TAB = 'resumen';
-  if (!asCanSeeCalendar() && AS_ADMIN_TAB === 'calendario') AS_ADMIN_TAB = 'resumen';
-  if (asIsAdminView() && !(u && u.role === 'worker')) asRenderAdmin();
+  if (!asCanSeePayroll() && AS_ADMIN_TAB === 'nomina') AS_ADMIN_TAB = 'turnos';
+  if (!asCanSeeCalendar() && AS_ADMIN_TAB === 'calendario') AS_ADMIN_TAB = 'turnos';
+  if (asIsAdminView() && !(u && u.role === 'worker')) {
+    asSyncAdminTabUi();
+    asRenderAdmin();
+  }
   var pinInput = document.getElementById('asPinInput');
   if (pinInput && !u) {
     pinInput.onkeydown = function(e) { if (e.key === 'Enter') asTryPin(); };
@@ -3435,20 +3455,62 @@ function asRenderMyOt() {
 function asValerieOpenShift() {
   return asOpenShiftForPin(asWorkerUser().pin);
 }
+function asRenderAdminTurnos(list, rows) {
+  var k = asAdminTurnosKpis(rows);
+  var weekChip = asHoursLabel(k.weekMs) + ' / ' + AS_WEEK_TARGET_H + 'h';
+  var html = '<div class="as-shift-kpis as-kpi-4 as-admin-sheet-kpis">' +
+    '<div class="as-kpi"><b>' + asHoursLabel(k.todayMs) + '</b><small>horas hoy</small></div>' +
+    '<div class="as-kpi"><b>' + weekChip + '</b><small>esta semana / 40h</small></div>' +
+    '<div class="as-kpi"><b>' + asHoursLabel(k.rangeMs) + '</b><small>horas del rango</small></div>' +
+    '<div class="as-kpi"><b>' + k.openN + '</b><small>turnos abiertos</small></div>' +
+    '</div>';
+  if (!rows.length) {
+    list.innerHTML = html + '<div class="as-empty">Sin turnos en este rango.</div>';
+    return;
+  }
+  html += '<div class="as-sheet-wrap"><table class="as-sheet"><thead><tr>' +
+    '<th>Colaboradora</th><th>Fecha</th><th>Entrar</th><th>Salir</th><th>Horas</th><th>Estado</th>' +
+    '</tr></thead><tbody>' + rows.map(function(s) {
+      var st = asShiftEstado(s);
+      var hrsMs = asWorkedMs(s, s.endedAt || Date.now());
+      return '<tr onclick="asOpenShiftDetail(\'' + s.id + '\',true)">' +
+        '<td data-label="Colaboradora">' + esc(s.userShort || s.userName || '—') + '</td>' +
+        '<td data-label="Fecha">' + asFmtDate(s.startedAt) + '</td>' +
+        '<td data-label="Entrar">' + asFmtTime(s.startedAt) + '</td>' +
+        '<td data-label="Salir">' + (s.endedAt ? asFmtTime(s.endedAt) : '—') + '</td>' +
+        '<td data-label="Horas">' + asHoursLabel(hrsMs) + '</td>' +
+        '<td data-label="Estado"><span class="badge ' + st.badge + '">' + st.label + '</span></td>' +
+        '</tr>';
+    }).join('') + '</tbody></table></div>';
+  list.innerHTML = html;
+}
 function asRenderAdminResumen(list) {
   asHydrateActiveFallback();
-  var today0 = new Date(); today0.setHours(0, 0, 0, 0);
-  var today1 = new Date(); today1.setHours(23, 59, 59, 999);
   var users = getAsistenciaUsers();
-  list.innerHTML = '<p class="as-muted">Quién está: EN TURNO · PAUSA · SIN SALIDA. Sin GPS.</p>' + users.map(function(w) {
+  list.innerHTML = '<p class="as-muted">Quién está: EN TURNO · PAUSA · SIN SALIDA. Últimos punches (Entrar / Salir / horas) y semana vs 40h. Sin GPS.</p>' + users.map(function(w) {
     var s = asOpenShiftForPin(w.pin);
     var pr = asPresence(s);
-    var todayMs = asShiftsInRange(w.pin, today0, today1).reduce(function(a, x) { return a + asWorkedMs(x); }, 0);
+    var todayMs = asTodayHoursMs(w.pin);
+    var weekMs = asWeekHoursMs(w.pin);
     var closeBtn = (s && !s.endedAt) ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button>' : '';
+    var punches = asShiftsForPin(w.pin).filter(function(x) { return x && x.startedAt; })
+      .sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); })
+      .slice(0, 7);
+    var punchHtml = punches.length ? punches.map(function(p) {
+      return '<div class="as-punch-row" onclick="asOpenShiftDetail(\'' + p.id + '\',true)">' +
+        '<span class="as-punch-date">' + asFmtDate(p.startedAt) + '</span>' +
+        '<span><b>Entrar</b> ' + asFmtTime(p.startedAt) + '</span>' +
+        '<span><b>Salir</b> ' + (p.endedAt ? asFmtTime(p.endedAt) : '—') + '</span>' +
+        '<span><b>Horas</b> ' + asHoursLabel(asWorkedMs(p, p.endedAt || Date.now())) + '</span>' +
+        '</div>';
+    }).join('') : '<small class="as-muted">Sin punches recientes.</small>';
     return '<div class="as-item"><div class="as-item-top"><b>' + esc(w.short || w.name || '—') + '</b><span class="badge ' + pr.badge + '">' + pr.label + '</span></div>' +
       '<div class="as-grid2"><small><b>Entrada:</b> ' + (s ? asFmtDateTime(s.startedAt) : '—') + '</small>' +
-      '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small></div>' +
-      (s && asShiftNoteText(s) ? '<small><b>Hoy:</b> ' + esc(asShiftNoteText(s)) + '</small>' : '') + closeBtn + '</div>';
+      '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small>' +
+      '<small><b>Esta semana:</b> ' + asHoursLabel(weekMs) + ' / ' + AS_WEEK_TARGET_H + 'h</small></div>' +
+      (s && asShiftNoteText(s) ? '<small><b>Hoy:</b> ' + esc(asShiftNoteText(s)) + '</small>' : '') +
+      '<div class="as-punch-list">' + punchHtml + '</div>' +
+      closeBtn + '</div>';
   }).join('');
 }
 function asRenderAdminCal(list) {
@@ -3469,12 +3531,19 @@ function asRenderAdminCal(list) {
   for (var i = 0; i < startPad; i++) cells += '<div class="as-cal-cell empty"></div>';
   for (var day = 1; day <= last; day++) {
     var dateStr = y + '-' + asPad(m + 1) + '-' + asPad(day);
-    var kind = asCalCellKind(dateStr, todayStr, asShiftsOnDay(all, dateStr));
+    var onDay = asShiftsOnDay(all, dateStr);
+    var kind = asCalCellKind(dateStr, todayStr, onDay);
     var cls = 'as-cal-cell ' + kind + (dateStr === todayStr ? ' today' : '');
     var click = 'onclick="asOpenCalDay(\'' + dateStr + '\')"';
     var label = kind === 'worked' ? 'trabajó' : kind === 'abierta' ? 'abierta' : kind === 'falta' ? 'falta' : '';
+    var dayHrs = '';
+    if (kind === 'worked' || kind === 'abierta') {
+      var dayMs = onDay.reduce(function(sum, sh) { return sum + asWorkedMs(sh); }, 0);
+      dayHrs = '<span class="as-cal-hrs">' + asHoursLabel(dayMs) + '</span>';
+    }
     cells += '<div class="' + cls + '" ' + click + ' role="button" tabindex="0"><span>' + day + '</span>' +
-      (label ? '<span class="as-cal-dot" title="' + label + '"></span>' : '') + '</div>';
+      (label ? '<span class="as-cal-dot" title="' + label + '"></span>' : '') +
+      dayHrs + '</div>';
   }
   list.innerHTML = '<p class="as-muted" style="margin-bottom:.5rem"><b>' + esc(w.name || 'Valeria Martínez-Calderón') + '</b> · asistencia del mes. Sin pesos.</p>' +
     '<div class="as-cal-nav"><button type="button" class="btn btn-outline btn-sm" onclick="asCalNav(-1)" aria-label="Mes anterior">‹</button><b>' +
