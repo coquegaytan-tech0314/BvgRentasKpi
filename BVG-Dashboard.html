@@ -8,9 +8,50 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F4EDE4">
 <meta name="format-detection" content="telephone=no">
-<link rel="icon" type="image/png" sizes="64x64" href="assets/alora-favicon.png">
-<link rel="apple-touch-icon" href="assets/alora-apple-touch.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/alora-favicon.png" id="aloraFavicon">
+<link rel="apple-touch-icon" href="assets/alora-apple-touch.png" id="aloraTouch">
 <title>ALORA — BVG Residencial</title>
+<script>
+/* Seasonal window (Mexico City). Wordmark never changes. Alta fallback. */
+function aloraSeasonKey(month1to12) {
+  var m = Number(month1to12);
+  if (!(m >= 1 && m <= 12)) return 'alta';
+  if (m === 12 || m <= 3) return 'alta';
+  if (m <= 5) return 'primavera';
+  if (m <= 10) return 'lluvias';
+  return 'otono';
+}
+function aloraMexicoCityMonth() {
+  try {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: 'numeric', day: 'numeric'
+    }).formatToParts(new Date());
+    var mo = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === 'month') mo = Number(parts[i].value);
+    }
+    return (mo >= 1 && mo <= 12) ? mo : 12;
+  } catch (e) { return 12; }
+}
+function aloraWindowSrc() {
+  return 'assets/alora-window-' + aloraSeasonKey(aloraMexicoCityMonth()) + '.png';
+}
+function aloraApplyWindowSeason() {
+  var src = aloraWindowSrc();
+  var fallback = 'assets/alora-window.png';
+  var probe = new Image();
+  probe.onload = function() {
+    var nodes = document.querySelectorAll('.alora-window-img');
+    for (var i = 0; i < nodes.length; i++) nodes[i].src = src;
+    var fav = document.getElementById('aloraFavicon');
+    if (fav) fav.href = src;
+    var touch = document.getElementById('aloraTouch');
+    if (touch) touch.href = src;
+  };
+  probe.onerror = function() { /* seasonal PNG not in yet — keep static fallback */ };
+  probe.src = src;
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Firebase SDK (compat for no-build-tool usage) -->
@@ -89,6 +130,7 @@
   var app = document.getElementById('app');
   if (login) login.style.display = 'none';
   if (app) app.style.display = 'block';
+  try { aloraApplyWindowSeason(); } catch (e) {}
 })();
 </script>
 
@@ -6313,6 +6355,7 @@ window.addEventListener('resize', fixMobileVH);
     window._aloraBooted = true;
     try { initApp(); } catch (e) { console.error(e); }
   }
+  try { aloraApplyWindowSeason(); } catch (e) {}
 })();
 </script>
 
