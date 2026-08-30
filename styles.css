@@ -947,7 +947,6 @@ th.sort-desc::after { content: ' ↓'; opacity: 1; }
 .cal-event.sur { background: rgba(196,164,132,.40); color: #6B4F2A; }
 .cal-event.n1204 { background: rgba(224,122,95,.32); color: #8B3A2A; }
 .cal-event.mant { background: rgba(212,160,23,.22); color: #854d0e; }
-.cal-legend-note { color: var(--text-muted); font-size: .62rem; margin-left: .2rem; }
 .cal-proximas { margin: 1rem 0 0; }
 .cal-proximas-title { font-size: 1rem; margin-bottom: .5rem; }
 .cal-proximas-empty { color: var(--text-muted); font-size: .8rem; margin: 0; }
