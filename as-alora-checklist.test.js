@@ -160,5 +160,24 @@ if (!loginChunk.includes('placeholder="Contraseña"')) throw new Error('welcome 
 if (!loginChunk.includes('Ingresar')) throw new Error('welcome Ingresar');
 if (!loginChunk.includes('BVG Residencial · Ixtapa Zihuatanejo')) throw new Error('welcome subtitle');
 if (!fs.existsSync(__dirname + '/assets/alora-login-mark.png')) throw new Error('locked login mark file missing');
+if (html.indexOf('password gate temporarily removed') !== -1) throw new Error('skip-login IIFE must be gone');
+if (html.indexOf('Safety net: hide login') !== -1) throw new Error('safety-net skip-login must be gone');
+if (html.indexOf("login.style.display = 'none'") !== -1) throw new Error('skip-login must not hide #loginScreen on load');
+if (html.indexOf("getElementById('loginScreen').style.display = 'none'") === -1) throw new Error('valid login still hides the gate');
+if (html.indexOf('class="topbar-logout"') === -1) throw new Error('mobile topbar needs Cerrar sesión');
+
+function asWelcomeLoginKind(value, teamPassword) {
+  var v = String(value == null ? '' : value).trim();
+  if (v === '2604') return 'worker';
+  if (v === '0314') return 'admin';
+  if (teamPassword && v === String(teamPassword)) return 'admin';
+  return 'reject';
+}
+if (asWelcomeLoginKind('2604', 'team') !== 'worker') throw new Error('2604 is colaboradora');
+if (asWelcomeLoginKind(' 2604 ', 'team') !== 'worker') throw new Error('2604 trim');
+if (asWelcomeLoginKind('0314', 'team') !== 'admin') throw new Error('0314 is admin');
+if (asWelcomeLoginKind('team', 'team') !== 'admin') throw new Error('team password is admin');
+if (asWelcomeLoginKind('nope', 'team') !== 'reject') throw new Error('wrong password stays out');
+if (asWelcomeLoginKind('', 'team') !== 'reject') throw new Error('empty password stays out');
 
 console.log('as-alora-checklist.test.js ok');

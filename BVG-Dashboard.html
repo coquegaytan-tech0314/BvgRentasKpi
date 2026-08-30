@@ -126,21 +126,8 @@ function aloraApplyWindowSeason() {
   </div>
 </div>
 <script>
-/* Temporary: no password gate. Runs even if the big dashboard script fails. */
 (function () {
-  var login = document.getElementById('loginScreen');
-  var app = document.getElementById('app');
-  if (login) login.style.display = 'none';
-  if (app) app.style.display = 'block';
   try { aloraApplyWindowSeason(); } catch (e) {}
-  try {
-    var raw = localStorage.getItem('bvg_activa_session') || sessionStorage.getItem('bvg_asistencia_session');
-    var u = raw ? JSON.parse(raw) : null;
-    if (u && (u.role === 'worker' || String(u.pin) === '2604')) {
-      document.documentElement.classList.add('hide-income');
-      document.body.classList.add('hide-income');
-    }
-  } catch (e) {}
 })();
 </script>
 
@@ -156,6 +143,7 @@ function aloraApplyWindowSeason() {
       <img src="assets/alora-window.png" alt="" class="alora-window-img" width="28" height="28">
       <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-sm">
     </div>
+    <button type="button" class="topbar-logout" onclick="logoutSession()">Cerrar sesión</button>
   </header>
   <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
@@ -1860,13 +1848,46 @@ function initSampleData() {
 /* ============================================================
    LOGIN
    ============================================================ */
-function attemptLogin() {
+function asWelcomeLoginKind(value, teamPassword) {
+  var v = String(value == null ? '' : value).trim();
+  if (v === '2604') return 'worker';
+  if (v === '0314') return 'admin';
+  if (teamPassword && v === String(teamPassword)) return 'admin';
+  return 'reject';
+}
+function asWelcomeSessionForKind(kind) {
+  if (kind === 'worker') {
+    return { pin: '2604', name: 'Valeria Martínez-Calderón', role: 'worker', short: 'Valeria', sessionId: asUid(), loginAt: Date.now() };
+  }
+  if (kind === 'admin') {
+    return { pin: '0314', name: 'Koke', role: 'admin', short: 'Koke', sessionId: asUid(), loginAt: Date.now() };
+  }
+  return null;
+}
+function openAppAfterGate() {
+  applyRevenueRestrictions();
+  var err = document.getElementById('loginError');
+  if (err) err.style.display = 'none';
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   if (!window._aloraBooted) {
     window._aloraBooted = true;
     initApp();
+  } else {
+    try { asRefreshAfterRoleChange(); } catch (e) {}
   }
+}
+function attemptLogin() {
+  var input = document.getElementById('loginPassword');
+  var err = document.getElementById('loginError');
+  var v = (input && input.value ? input.value : '').trim();
+  var kind = asWelcomeLoginKind(v, getPassword());
+  if (kind === 'reject') {
+    if (err) err.style.display = 'block';
+    return;
+  }
+  asSetSession(asWelcomeSessionForKind(kind));
+  openAppAfterGate();
 }
 document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 
@@ -2084,16 +2105,19 @@ function asCurrentUser() {
     if (u) {
       u = asHydrateSessionRole(u);
       localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
-      sessionStorage.removeItem('bvg_asistencia_session');
       return u;
     }
   } catch (e) {}
   return null;
 }
 function asSetSession(u) {
-  if (u) localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
-  else localStorage.removeItem(AS_SESSION_KEY);
-  try { sessionStorage.removeItem('bvg_asistencia_session'); } catch (e) {}
+  if (u) {
+    localStorage.setItem(AS_SESSION_KEY, JSON.stringify(u));
+    try { sessionStorage.setItem('bvg_asistencia_session', JSON.stringify(u)); } catch (e) {}
+  } else {
+    localStorage.removeItem(AS_SESSION_KEY);
+    try { sessionStorage.removeItem('bvg_asistencia_session'); } catch (e) {}
+  }
 }
 function asIsAdminView() {
   var u = asCurrentUser();
@@ -6400,6 +6424,10 @@ function logoutSession() {
   sessionStorage.removeItem('bvg_admin_active');
   sessionStorage.removeItem('bvg_asistencia_session');
   localStorage.removeItem('bvg_last_login');
+  localStorage.removeItem('bvg_activa_session');
+  try { asSetSession(null); } catch (e) {}
+  document.documentElement.classList.remove('hide-income');
+  document.body.classList.remove('hide-income');
   _sessionActive = false;
   // Stop timers
   clearInactivityTimers();
@@ -6408,6 +6436,8 @@ function logoutSession() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = '';
   document.getElementById('loginPassword').value = '';
+  var err = document.getElementById('loginError');
+  if (err) err.style.display = 'none';
   // Close any open sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
   var overlay = document.getElementById('overlay');
@@ -6470,19 +6500,6 @@ function dismissTimeout() {
   }
 }
 
-// Password gate temporarily removed — always open the dashboard.
-(function(){
-  try { localStorage.setItem('bvg_last_login', Date.now().toString()); } catch (e) {}
-  var login = document.getElementById('loginScreen');
-  var app = document.getElementById('app');
-  if (login) login.style.display = 'none';
-  if (app) app.style.display = 'block';
-  if (!window._aloraBooted && typeof initApp === 'function') {
-    window._aloraBooted = true;
-    initApp();
-  }
-})();
-
 // Fix iOS 100vh issue
 function fixMobileVH() {
   var vh = window.innerHeight * 0.01;
@@ -6490,20 +6507,6 @@ function fixMobileVH() {
 }
 fixMobileVH();
 window.addEventListener('resize', fixMobileVH);
-</script>
-<script>
-/* Safety net: hide login even if the dashboard script above failed to parse. */
-(function () {
-  var login = document.getElementById('loginScreen');
-  var app = document.getElementById('app');
-  if (login) login.style.display = 'none';
-  if (app) app.style.display = 'block';
-  if (!window._aloraBooted && typeof initApp === 'function') {
-    window._aloraBooted = true;
-    try { initApp(); } catch (e) { console.error(e); }
-  }
-  try { aloraApplyWindowSeason(); } catch (e) {}
-})();
 </script>
 
 <!-- Client Detail Modal -->

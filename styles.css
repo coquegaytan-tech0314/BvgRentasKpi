@@ -275,6 +275,21 @@ body.hide-income [data-section="recibos"] { display: none !important; }
 .page-header h2 { font-size: 1.35rem; font-weight: 700; }
 
 .mobile-topbar { display: none; }
+.topbar-logout {
+  position: absolute;
+  right: .5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: var(--radius);
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .35rem .55rem;
+  min-height: 36px;
+  cursor: pointer;
+}
 .hamburger {
   display: none;
   background: var(--bg-card);
