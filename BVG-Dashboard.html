@@ -41,7 +41,10 @@ function aloraApplyWindowSeason() {
   var probe = new Image();
   probe.onload = function() {
     var nodes = document.querySelectorAll('.alora-window-img');
-    for (var i = 0; i < nodes.length; i++) nodes[i].src = src;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].closest && nodes[i].closest('#loginScreen')) continue;
+      nodes[i].src = src;
+    }
     var fav = document.getElementById('aloraFavicon');
     if (fav) fav.href = src;
     var touch = document.getElementById('aloraTouch');
@@ -113,7 +116,7 @@ function aloraApplyWindowSeason() {
 <div id="loginScreen">
   <div class="login-box">
     <div class="alora-brand-stack">
-      <img src="assets/alora-window.png" alt="" class="alora-window-img alora-window-lg" width="72" height="72">
+      <img src="assets/alora-login-mark.png" alt="" class="alora-window-img alora-window-lg" width="72" height="72">
       <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-lg">
     </div>
     <p class="alora-sub">BVG Residencial · Ixtapa Zihuatanejo</p>

@@ -151,4 +151,14 @@ var stripped = asBookingsWithoutIncome([{ rent: 'Ada', total: 16500, anticipo: '
 if (stripped.rent !== 'Ada' || stripped.depto !== '1404 Norte') throw new Error('ops fields stay');
 if (stripped.total != null || stripped.anticipo != null || stripped.lim != null) throw new Error('income fields stripped');
 
+var fs = require('fs');
+var html = fs.readFileSync(__dirname + '/BVG-Dashboard.html', 'utf8');
+var loginChunk = html.split('id="loginScreen"')[1].split('id="app"')[0];
+if (!loginChunk.includes('assets/alora-login-mark.png')) throw new Error('welcome card must use locked login mark');
+if (loginChunk.includes('alora-window.png') || loginChunk.includes('alora-window-lluvias')) throw new Error('welcome card must not use header or seasonal window');
+if (!loginChunk.includes('placeholder="Contraseña"')) throw new Error('welcome Contraseña field');
+if (!loginChunk.includes('Ingresar')) throw new Error('welcome Ingresar');
+if (!loginChunk.includes('BVG Residencial · Ixtapa Zihuatanejo')) throw new Error('welcome subtitle');
+if (!fs.existsSync(__dirname + '/assets/alora-login-mark.png')) throw new Error('locked login mark file missing');
+
 console.log('as-alora-checklist.test.js ok');
