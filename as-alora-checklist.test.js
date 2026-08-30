@@ -190,6 +190,7 @@ if (html.indexOf('as-cal-hrs') === -1) throw new Error('calendar cells must show
 if (html.indexOf('as-punch-row') === -1) throw new Error('resumen last punches');
 if (html.indexOf('AS_WEEK_TARGET_H = 40') === -1) throw new Error('Valerie 40h weekly target');
 if (html.indexOf('try { renderAsistencia(); } catch (e) {}') === -1) throw new Error('welcome admin session must refresh asistencia panel');
+if (html.indexOf('id="asAdmin"') === -1 || html.indexOf('id="asAdmin"') > html.indexOf('id="asWorker"')) throw new Error('admin timesheet must render above the clock');
 
 var css = fs.readFileSync(__dirname + '/styles.css', 'utf8');
 if (css.indexOf('.as-sheet') === -1) throw new Error('timesheet css missing');
