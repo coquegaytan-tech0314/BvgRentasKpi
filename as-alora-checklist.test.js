@@ -111,21 +111,30 @@ if (aloraSeasonKey(11) !== 'otono') throw new Error('otono');
 if (aloraSeasonKey(0) !== 'alta' || aloraSeasonKey(99) !== 'alta') throw new Error('alta fallback');
 if (aloraSeasonKey(8) !== 'lluvias') throw new Error('Aug 2026 Mexico must be lluvias');
 
-function asHydrateSessionRole(u) {
-  if (!u || u.role) return u;
-  if (String(u.pin) === '2604') u.role = 'worker';
-  if (String(u.pin) === '0314') u.role = 'admin';
+function asNormalizeRole(u) {
+  if (!u) return u;
+  var pin = String(u.pin || '');
+  var role = String(u.role || '').toLowerCase();
+  if (pin === '2604') {
+    u.role = 'worker';
+  } else if (pin === '0314' || role === 'admin') {
+    u.role = 'admin';
+  } else if (role === 'worker' || role === 'colaboradora' || role === 'trabajadora' || !role) {
+    u.role = 'worker';
+  }
   return u;
 }
 function asCanSeeRevenueFromUser(u) {
-  u = asHydrateSessionRole(u);
-  return !(u && u.role === 'worker');
+  if (!u) return true;
+  u = asNormalizeRole({ pin: u.pin, role: u.role });
+  return u.role !== 'worker';
 }
 if (!asCanSeeRevenueFromUser(null)) throw new Error('no-PIN is owner and sees revenue');
 if (!asCanSeeRevenueFromUser({ pin: '0314', role: 'admin' })) throw new Error('Koke 0314 sees revenue');
 if (asCanSeeRevenueFromUser({ pin: '2604', role: 'worker' })) throw new Error('Valerie 2604 must not see revenue');
-if (!asCanSeeRevenueFromUser({ pin: '2604', role: 'admin' })) throw new Error('non-worker role still sees revenue');
+if (asCanSeeRevenueFromUser({ pin: '2604', role: 'admin' })) throw new Error('PIN 2604 must hide revenue even if stored as admin');
 if (asCanSeeRevenueFromUser({ pin: '2604' })) throw new Error('PIN 2604 without role must hide revenue');
+if (asCanSeeRevenueFromUser({ pin: '2604', role: 'colaboradora' })) throw new Error('colaboradora label must hide revenue');
 if (!asCanSeeRevenueFromUser({ pin: '0314' })) throw new Error('PIN 0314 without role still sees revenue');
 
 function asBookingsWithoutIncome(list) {

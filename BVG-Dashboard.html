@@ -1960,8 +1960,8 @@ function defaultAsistenciaUsers() {
 }
 function getAsistenciaUsers() {
   var stored = loadData(STORAGE_KEYS.asistenciaPins);
-  if (Array.isArray(stored) && stored.length) return stored;
-  return defaultAsistenciaUsers();
+  var list = (Array.isArray(stored) && stored.length) ? stored : defaultAsistenciaUsers();
+  return list.map(function(u) { return asNormalizeRole(u); });
 }
 function saveAsistenciaUsers(users) { saveData(STORAGE_KEYS.asistenciaPins, users); }
 
@@ -2057,16 +2057,21 @@ function asIsPhone() {
   var smallScreen = Math.min(screen.width, screen.height) <= 500;
   return mobileUA || (touch && smallScreen);
 }
-function asHydrateSessionRole(u) {
-  if (!u || u.role) return u;
-  try {
-    var users = getAsistenciaUsers();
-    var match = users && users.find(function(x) { return String(x.pin) === String(u.pin); });
-    if (match && match.role) u.role = match.role;
-  } catch (e) {}
-  if (!u.role && String(u.pin) === '2604') u.role = 'worker';
-  if (!u.role && String(u.pin) === '0314') u.role = 'admin';
+function asNormalizeRole(u) {
+  if (!u) return u;
+  var pin = String(u.pin || '');
+  var role = String(u.role || '').toLowerCase();
+  if (pin === '2604') {
+    u.role = 'worker';
+  } else if (pin === '0314' || role === 'admin') {
+    u.role = 'admin';
+  } else if (role === 'worker' || role === 'colaboradora' || role === 'trabajadora' || !role) {
+    u.role = 'worker';
+  }
   return u;
+}
+function asHydrateSessionRole(u) {
+  return asNormalizeRole(u);
 }
 function asCurrentUser() {
   try {
@@ -2102,11 +2107,27 @@ function asCanSeeCalendar() {
 }
 function asCanSeeRevenue() {
   var u = asCurrentUser();
-  return !(u && u.role === 'worker');
+  if (!u) return true;
+  u = asNormalizeRole({ pin: u.pin, role: u.role });
+  return u.role !== 'worker';
 }
 function applyRevenueRestrictions() {
   document.body.classList.toggle('hide-income', !asCanSeeRevenue());
   document.documentElement.classList.toggle('hide-income', !asCanSeeRevenue());
+}
+function asRefreshAfterRoleChange() {
+  applyRevenueRestrictions();
+  try { renderDashboard(); } catch (e) {}
+  try {
+    if (document.getElementById('sec-tracking') && document.getElementById('sec-tracking').classList.contains('active')) renderTracking();
+  } catch (e) {}
+  try {
+    if (document.getElementById('sec-reportes') && document.getElementById('sec-reportes').classList.contains('active')) renderReports();
+  } catch (e) {}
+  try {
+    if (document.getElementById('sec-gastos') && document.getElementById('sec-gastos').classList.contains('active')) renderExpenses();
+  } catch (e) {}
+  try { renderCRM(); } catch (e) {}
 }
 try { applyRevenueRestrictions(); } catch (e) {}
 function asShiftNoteText(s) {
@@ -2320,7 +2341,6 @@ function asTryPin() {
   if (!u) { showToast('PIN incorrecto', 'error'); return; }
   var sess = { pin: String(u.pin), name: u.name, role: u.role, short: u.short, sessionId: asUid(), loginAt: Date.now() };
   asSetSession(sess);
-  applyRevenueRestrictions();
   var acc = {
     id: sess.sessionId, type: 'login', userPin: sess.pin, userName: u.name, userShort: u.short,
     loginAt: sess.loginAt, logoutAt: null, device: asIsPhone() ? 'phone' : 'desktop',
@@ -2329,7 +2349,7 @@ function asTryPin() {
   saveAsistenciaAccesos(asUpsertById(getAsistenciaAccesos(), acc));
   if (input) input.value = '';
   renderAsistencia();
-  try { renderDashboard(); } catch (e) {}
+  asRefreshAfterRoleChange();
   showToast('Hola, ' + u.short, 'success');
 }
 
@@ -2345,12 +2365,11 @@ function asLogoutPin() {
     }
   }
   asSetSession(null);
-  applyRevenueRestrictions();
   _asJustEnded = null;
   _asDayPhotos = [];
   if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   renderAsistencia();
-  try { renderDashboard(); } catch (e) {}
+  asRefreshAfterRoleChange();
 }
 
 function asActiveShift() {
