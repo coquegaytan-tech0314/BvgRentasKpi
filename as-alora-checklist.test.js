@@ -96,4 +96,19 @@ var shifts = [
 ];
 if (asCountFaltasThrough(shifts, aug1, aug15, now) !== 8) throw new Error('faltas 1-10 minus 3 and 10 = 8');
 
+function aloraSeasonKey(month1to12) {
+  var m = Number(month1to12);
+  if (!(m >= 1 && m <= 12)) return 'alta';
+  if (m === 12 || m <= 3) return 'alta';
+  if (m <= 5) return 'primavera';
+  if (m <= 10) return 'lluvias';
+  return 'otono';
+}
+if (aloraSeasonKey(12) !== 'alta' || aloraSeasonKey(1) !== 'alta' || aloraSeasonKey(3) !== 'alta') throw new Error('alta');
+if (aloraSeasonKey(4) !== 'primavera' || aloraSeasonKey(5) !== 'primavera') throw new Error('primavera');
+if (aloraSeasonKey(6) !== 'lluvias' || aloraSeasonKey(8) !== 'lluvias' || aloraSeasonKey(10) !== 'lluvias') throw new Error('lluvias');
+if (aloraSeasonKey(11) !== 'otono') throw new Error('otono');
+if (aloraSeasonKey(0) !== 'alta' || aloraSeasonKey(99) !== 'alta') throw new Error('alta fallback');
+if (aloraSeasonKey(8) !== 'lluvias') throw new Error('Aug 2026 Mexico must be lluvias');
+
 console.log('as-alora-checklist.test.js ok');

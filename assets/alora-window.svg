@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 268" fill="none">
-  <!-- Locked ALORA window mascot: Ixtapa from inside the unit -->
+  <!-- Original ALORA window: thin arch, 6-frond cocotero, two mountains, coral sun, key on sill. -->
   <defs>
     <clipPath id="arch">
       <path d="M28 214 V96 A82 82 0 0 1 192 96 V214 Z"/>
@@ -7,27 +7,22 @@
   </defs>
   <g clip-path="url(#arch)">
     <path d="M28 214 V96 A82 82 0 0 1 192 96 V214 Z" fill="#F4EDE4"/>
-    <!-- coral sun, upper right -->
     <circle cx="148" cy="78" r="24" fill="#E07A5F"/>
-    <!-- back mountain (charcoal, larger, right) -->
     <polygon points="88,214 158,92 210,214" fill="#2C2C2C"/>
-    <!-- front mountain (sand tan) -->
     <polygon points="18,214 86,128 168,214" fill="#C4A882"/>
-    <!-- one palm, left, trunk leans in -->
-    <g stroke="#2C2C2C" fill="none" stroke-linecap="round">
-      <path d="M58 214 L72 132" stroke-width="4"/>
-      <path d="M72 134 C58 128 46 118 40 104" stroke-width="3"/>
-      <path d="M72 132 C62 118 58 104 60 90" stroke-width="3"/>
-      <path d="M72 132 C78 116 86 104 98 94" stroke-width="3"/>
-      <path d="M72 134 C84 128 96 124 108 122" stroke-width="3"/>
-      <path d="M72 130 C68 114 72 100 80 88" stroke-width="3"/>
+    <!-- slender trunk leans in; six drooping fronds (not a stick-fan) -->
+    <g stroke="#2C2C2C" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M58 210 Q64 172 70 128" stroke-width="3.4"/>
+      <path d="M70 128 C54 122 42 128 36 142" stroke-width="2.8"/>
+      <path d="M70 128 C52 112 40 110 34 122" stroke-width="2.8"/>
+      <path d="M70 126 C60 104 50 98 44 112" stroke-width="2.8"/>
+      <path d="M70 126 C80 102 92 98 100 112" stroke-width="2.8"/>
+      <path d="M70 128 C86 116 100 118 110 130" stroke-width="2.8"/>
+      <path d="M70 128 C84 130 96 140 102 152" stroke-width="2.8"/>
     </g>
   </g>
-  <!-- thin arch frame -->
   <path d="M28 214 V96 A82 82 0 0 1 192 96 V214" stroke="#2C2C2C" stroke-width="5" stroke-linecap="round"/>
-  <!-- thick sill -->
   <rect x="16" y="210" width="188" height="16" rx="2" fill="#2C2C2C"/>
-  <!-- skeleton key on the sill -->
   <g transform="translate(88 212)" fill="none" stroke="#F4EDE4" stroke-width="2.2" stroke-linecap="round">
     <circle cx="10" cy="6" r="5.5"/>
     <path d="M15.5 6 H36"/>
