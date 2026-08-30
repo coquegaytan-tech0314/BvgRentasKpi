@@ -2112,8 +2112,12 @@ function asCanSeeRevenue() {
   return u.role !== 'worker';
 }
 function applyRevenueRestrictions() {
-  document.body.classList.toggle('hide-income', !asCanSeeRevenue());
-  document.documentElement.classList.toggle('hide-income', !asCanSeeRevenue());
+  var hide = !asCanSeeRevenue();
+  document.body.classList.toggle('hide-income', hide);
+  document.documentElement.classList.toggle('hide-income', hide);
+  document.querySelectorAll('[data-section="recibos"]').forEach(function(el) {
+    el.style.display = hide ? 'none' : '';
+  });
 }
 function asRefreshAfterRoleChange() {
   applyRevenueRestrictions();

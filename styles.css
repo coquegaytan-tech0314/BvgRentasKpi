@@ -180,7 +180,9 @@ tr:hover { background: var(--bg-hover); }
    ============================================================ */
 #app { display: none; }
 html.hide-income .income-only,
-body.hide-income .income-only { display: none !important; }
+body.hide-income .income-only,
+html.hide-income [data-section="recibos"],
+body.hide-income [data-section="recibos"] { display: none !important; }
 .layout { display: flex; min-height: 100vh; }
 .sidebar {
   width: var(--sidebar-w);
