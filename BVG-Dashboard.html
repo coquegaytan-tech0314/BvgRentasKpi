@@ -6255,10 +6255,10 @@ function logoutSession() {
   _sessionActive = false;
   // Stop timers
   clearInactivityTimers();
-  // Hide everything, show login
+  // Password gate is off — stay in the app
   document.getElementById('timeoutOverlay').style.display = 'none';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('loginScreen').style.display = '';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('loginPassword').value = '';
   // Close any open sidebar on mobile
   document.getElementById('sidebar').classList.remove('open');
