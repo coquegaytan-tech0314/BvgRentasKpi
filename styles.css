@@ -1599,13 +1599,14 @@ input[type="date"] { min-height: 44px; }
 .as-cal-cell.falta .as-cal-dot { background: var(--red); }
 .as-cal-hrs {
   display: block;
-  font-size: .58rem;
+  font-size: .7rem;
   font-weight: 800;
-  margin-top: 1px;
-  line-height: 1.1;
+  margin-top: 2px;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
 }
-.as-cal-cell { min-height: 52px; }
+.as-cal-cell { min-height: 56px; }
 .as-admin-sheet-kpis { margin-bottom: .85rem; }
 .as-sheet-wrap {
   overflow-x: auto;

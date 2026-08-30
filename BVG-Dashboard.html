@@ -607,6 +607,46 @@ function aloraApplyWindowSeason() {
 
         <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
 
+        <div id="asAdmin" style="display:none">
+          <div class="settings-card">
+            <h3>Panel de administración — Todos los turnos</h3>
+            <p class="as-muted">Tabla de Entrar / Salir / horas de cada colaboradora (pausas descontadas). También accesos, clientes y gastos del checador.</p>
+            <div class="as-tabs" id="asAdminTabs">
+              <button type="button" class="as-tab" data-as-tab="resumen" onclick="asSwitchTab('resumen')">Resumen</button>
+              <button type="button" class="as-tab active" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
+              <button type="button" class="as-tab" data-as-tab="calendario" id="asTabCalendario" onclick="asSwitchTab('calendario')">Calendario</button>
+              <button type="button" class="as-tab" data-as-tab="tareas" onclick="asSwitchTab('tareas')">Tareas</button>
+              <button type="button" class="as-tab" data-as-tab="extra" onclick="asSwitchTab('extra')">Tiempo extra</button>
+              <button type="button" class="as-tab" data-as-tab="nomina" id="asTabNomina" onclick="asSwitchTab('nomina')">Nómina</button>
+              <button type="button" class="as-tab" data-as-tab="peticiones" onclick="asSwitchTab('peticiones')">Peticiones</button>
+              <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
+              <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
+              <button type="button" class="as-tab" data-as-tab="gastos" onclick="asSwitchTab('gastos')">Gastos</button>
+            </div>
+            <div class="as-filterbar">
+              <input type="date" id="asFltFrom" onchange="asRenderAdmin()">
+              <input type="date" id="asFltTo" onchange="asRenderAdmin()">
+            </div>
+            <div class="as-filterbar" id="asFltRow2" style="display:none">
+              <select id="asFltDepto" onchange="asRenderAdmin()">
+                <option value="">Todos los deptos</option>
+                <option value="1401 Sur">1401 Sur</option>
+                <option value="1404 Norte">1404 Norte</option>
+                <option value="1204 Norte">1204 Norte</option>
+              </select>
+              <select id="asFltFuente" onchange="asRenderAdmin()">
+                <option value="">Todas las fuentes</option>
+                <option>Airbnb</option><option>Directo</option><option>Vanesa</option>
+                <option>David</option><option>Miris</option><option>Otro</option>
+              </select>
+            </div>
+            <div style="margin:.5rem 0 1rem">
+              <button type="button" class="btn btn-outline" id="asCsvBtn" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
+            </div>
+            <div id="asAdminList" class="as-list"></div>
+          </div>
+        </div>
+
         <div id="asWorker" style="display:none">
           <div id="asWorkerHome">
             <div class="settings-card">
@@ -740,46 +780,6 @@ function aloraApplyWindowSeason() {
               <button type="button" class="btn btn-primary as-full-btn" style="margin-top:.75rem" onclick="asGoOffShift()">Volver al inicio</button>
               <button type="button" class="btn btn-outline as-full-btn" style="margin-top:.5rem" onclick="asLogoutPin()">Cerrar sesión</button>
             </div>
-          </div>
-        </div>
-
-        <div id="asAdmin" style="display:none">
-          <div class="settings-card">
-            <h3>Panel de administración — Todos los turnos</h3>
-            <p class="as-muted">Tabla de Entrar / Salir / horas de cada colaboradora (pausas descontadas). También accesos, clientes y gastos del checador.</p>
-            <div class="as-tabs" id="asAdminTabs">
-              <button type="button" class="as-tab" data-as-tab="resumen" onclick="asSwitchTab('resumen')">Resumen</button>
-              <button type="button" class="as-tab active" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
-              <button type="button" class="as-tab" data-as-tab="calendario" id="asTabCalendario" onclick="asSwitchTab('calendario')">Calendario</button>
-              <button type="button" class="as-tab" data-as-tab="tareas" onclick="asSwitchTab('tareas')">Tareas</button>
-              <button type="button" class="as-tab" data-as-tab="extra" onclick="asSwitchTab('extra')">Tiempo extra</button>
-              <button type="button" class="as-tab" data-as-tab="nomina" id="asTabNomina" onclick="asSwitchTab('nomina')">Nómina</button>
-              <button type="button" class="as-tab" data-as-tab="peticiones" onclick="asSwitchTab('peticiones')">Peticiones</button>
-              <button type="button" class="as-tab" data-as-tab="accesos" onclick="asSwitchTab('accesos')">Accesos</button>
-              <button type="button" class="as-tab" data-as-tab="clientes" onclick="asSwitchTab('clientes')">Clientes</button>
-              <button type="button" class="as-tab" data-as-tab="gastos" onclick="asSwitchTab('gastos')">Gastos</button>
-            </div>
-            <div class="as-filterbar">
-              <input type="date" id="asFltFrom" onchange="asRenderAdmin()">
-              <input type="date" id="asFltTo" onchange="asRenderAdmin()">
-            </div>
-            <div class="as-filterbar" id="asFltRow2" style="display:none">
-              <select id="asFltDepto" onchange="asRenderAdmin()">
-                <option value="">Todos los deptos</option>
-                <option value="1401 Sur">1401 Sur</option>
-                <option value="1404 Norte">1404 Norte</option>
-                <option value="1204 Norte">1204 Norte</option>
-              </select>
-              <select id="asFltFuente" onchange="asRenderAdmin()">
-                <option value="">Todas las fuentes</option>
-                <option>Airbnb</option><option>Directo</option><option>Vanesa</option>
-                <option>David</option><option>Miris</option><option>Otro</option>
-              </select>
-            </div>
-            <div style="margin:.5rem 0 1rem">
-              <button type="button" class="btn btn-outline" id="asCsvBtn" onclick="exportAsistenciaCSV()">Descargar CSV de esta vista</button>
-            </div>
-            <div id="asAdminList" class="as-list"></div>
           </div>
         </div>
       </div>
