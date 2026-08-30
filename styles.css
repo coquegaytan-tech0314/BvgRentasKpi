@@ -109,8 +109,7 @@ tr:hover { background: var(--bg-hover); }
     radial-gradient(ellipse at 12% -10%, rgba(255,56,92,.10), transparent 52%),
     radial-gradient(ellipse at 110% 110%, rgba(130,199,232,.22), transparent 48%),
     var(--bg-primary);
-  display: none; /* password gate is off */
-  align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   min-height: 100vh;
   min-height: calc(var(--vh, 1vh) * 100);
   padding: 1.25rem;
@@ -179,7 +178,7 @@ tr:hover { background: var(--bg-hover); }
 /* ============================================================
    LAYOUT: SIDEBAR + MAIN
    ============================================================ */
-#app { display: block; }
+#app { display: none; }
 .layout { display: flex; min-height: 100vh; }
 .sidebar {
   width: var(--sidebar-w);
