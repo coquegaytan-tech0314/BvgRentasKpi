@@ -744,9 +744,14 @@ function aloraApplyWindowSeason() {
         </div>
 
         <div id="asAdmin" style="display:none">
+          <div class="settings-card" id="asLastPunchCard">
+            <h3>Último punch de Valeria</h3>
+            <p class="as-muted">Entrar y Salir con hora exacta. Se actualiza al tocar SALIR. Sin abrir Turnos ni un modal.</p>
+            <div id="asLastPunchBanner" class="as-list"></div>
+          </div>
           <div class="settings-card">
             <h3>Panel de administración — Todos los turnos</h3>
-            <p class="as-muted">Entrar y Salir con hora exacta de Valeria (y cualquier otro PIN). También accesos, clientes y gastos del checador.</p>
+            <p class="as-muted">Fecha · Entrar · Salir · Horas · Estado. Resumen y este recuadro muestran la última SALIR sin cazar pestañas.</p>
             <div class="as-tabs" id="asAdminTabs">
               <button type="button" class="as-tab active" data-as-tab="resumen" onclick="asSwitchTab('resumen')">Resumen</button>
               <button type="button" class="as-tab" data-as-tab="turnos" onclick="asSwitchTab('turnos')">Turnos</button>
@@ -2356,6 +2361,53 @@ function asOpenShiftForPin(pin) {
   open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
   return open[0] || null;
 }
+function asLastClosedShiftForPin(pin) {
+  var closed = asShiftsForPin(pin).filter(function(s) { return s && s.endedAt; });
+  closed.sort(function(a, b) { return (b.endedAt || 0) - (a.endedAt || 0); });
+  return closed[0] || null;
+}
+function asDisplayShiftForPin(pin) {
+  return asOpenShiftForPin(pin) || asLastClosedShiftForPin(pin);
+}
+function asPunchSalirLabel(s) {
+  if (!s) return '—';
+  if (!s.endedAt) return 'abierta / sin salida';
+  return asFmtDateTime(s.endedAt);
+}
+function asPunchTimesHtml(s) {
+  var open = !!(s && !s.endedAt);
+  var hrs = s ? asHoursLabel(asWorkedMs(s, s.endedAt || Date.now())) : '—';
+  return '<div class="as-grid2">' +
+    '<small><b>Fecha:</b> ' + (s ? asFmtDate(s.startedAt) : '—') + '</small>' +
+    '<small><b>Horas:</b> ' + hrs + (open ? ' (en curso)' : '') + '</small>' +
+    '<small><b>Entrar:</b> ' + (s ? asFmtDateTime(s.startedAt) : '—') + '</small>' +
+    '<small><b>Salir:</b> ' + asPunchSalirLabel(s) + '</small>' +
+    '</div>' +
+    (s && asShiftNoteText(s) ? '<small><b>Hoy:</b> ' + esc(asShiftNoteText(s)) + '</small>' : '');
+}
+function asRenderLastPunchBanner() {
+  var box = document.getElementById('asLastPunchBanner');
+  if (!box) return;
+  var w = asWorkerUser();
+  var s = asDisplayShiftForPin(w.pin);
+  if (!s) {
+    box.innerHTML = '<div class="as-empty">Aún no hay punch de ' + esc(w.short || 'Valeria') + '.</div>';
+    return;
+  }
+  var open = !s.endedAt;
+  var pr = asPresence(open ? s : null);
+  var closeBtn = open ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button>' : '';
+  box.innerHTML = '<div class="as-item">' +
+    '<div class="as-item-top"><b>' + esc(w.short || w.name || 'Valeria') + ' · último turno</b><span class="badge ' + (open ? pr.badge : 'badge-green') + '">' + (open ? 'abierta / sin salida' : 'cerrado') + '</span></div>' +
+    asPunchTimesHtml(s) + closeBtn + '</div>';
+}
+function asCalHoursText(shiftsOnDay) {
+  if (!shiftsOnDay || !shiftsOnDay.length) return '';
+  var ms = 0;
+  for (var i = 0; i < shiftsOnDay.length; i++) ms += asWorkedMs(shiftsOnDay[i]);
+  if (ms <= 0) return '';
+  return (ms / 3600000).toFixed(1) + 'h';
+}
 function asPersistShift(s) {
   saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
   if (s && !s.endedAt) asWriteActiveFallback(s);
@@ -2842,6 +2894,8 @@ function asRenderAdmin() {
   if (!asIsAdminView()) return;
   var list = document.getElementById('asAdminList');
   if (!list) return;
+  asHydrateActiveFallback();
+  asRenderLastPunchBanner();
   var t = AS_ADMIN_TAB;
   var filters = document.getElementById('asFltRow2');
   var range = document.getElementById('asFltFrom') && document.getElementById('asFltFrom').parentNode;
@@ -2871,9 +2925,10 @@ function asRenderAdmin() {
       return '<div class="as-item" onclick="asOpenShiftDetail(\'' + s.id + '\',true)" style="cursor:pointer"><div class="as-item-top"><b>' + esc(s.userShort || s.userName || '—') + '</b><span class="badge ' + (open ? 'badge-orange' : 'badge-green') + '">' + st + '</span></div>' +
         '<div class="as-grid2">' +
         '<small><b>Fecha:</b> ' + asFmtDate(s.startedAt) + '</small>' +
-        '<small><b>Duración:</b> ' + (open && !s.endedAt ? asFmtDur(hrsMs) + ' (en curso)' : asFmtDur(hrsMs)) + ' <i>sin pausas</i></small>' +
+        '<small><b>Estado:</b> ' + (open ? (paused ? 'pausa' : 'abierta / sin salida') : 'cerrado') + '</small>' +
         '<small><b>Entrar:</b> ' + asFmtDateTime(s.startedAt) + '</small>' +
-        '<small><b>Salir:</b> ' + (s.endedAt ? asFmtDateTime(s.endedAt) : '—') + '</small>' +
+        '<small><b>Salir:</b> ' + asPunchSalirLabel(s) + '</small>' +
+        '<small><b>Horas:</b> ' + asHoursLabel(hrsMs) + (open ? ' (en curso)' : '') + ' <i>sin pausas</i></small>' +
         '<small><b>Clientes:</b> ' + clientes + '</small>' +
         '<small><b>Gastos:</b> ' + numGastos + ' · ' + fmtMoney(gastos) + '</small>' +
         '</div>' +
@@ -2978,10 +3033,11 @@ function renderAsistencia() {
   var whoBar = document.getElementById('asWhoBar');
   var desk = document.getElementById('asDesktopWarn');
   if (!pinGate) return;
+  var showAdmin = asIsAdminView() && !(u && u.role === 'worker');
   pinGate.style.display = u ? 'none' : '';
-  worker.style.display = u ? '' : 'none';
+  worker.style.display = (u && !showAdmin) ? '' : 'none';
   whoBar.style.display = u ? 'flex' : 'none';
-  if (u) {
+  if (u && !showAdmin) {
     document.getElementById('asWhoName').textContent = u.short || u.name;
     document.getElementById('asWhoRole').textContent = u.role === 'admin' ? 'Admin' : 'Colaboradora';
     desk.style.display = asIsPhone() ? 'none' : '';
@@ -2999,19 +3055,24 @@ function renderAsistencia() {
       document.getElementById('asOffShift').style.display = '';
       if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
     }
+  } else if (u && showAdmin) {
+    document.getElementById('asWhoName').textContent = u.short || u.name;
+    document.getElementById('asWhoRole').textContent = u.role === 'admin' ? 'Admin' : 'Colaboradora';
+    desk.style.display = asIsPhone() ? 'none' : '';
+    if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   } else {
     desk.style.display = 'none';
     if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
   }
-  if (u) asRenderWorkerHome();
-  admin.style.display = (asIsAdminView() && !(u && u.role === 'worker')) ? '' : 'none';
+  if (u && !showAdmin) asRenderWorkerHome();
+  admin.style.display = showAdmin ? '' : 'none';
   var nomTab = document.getElementById('asTabNomina');
   if (nomTab) nomTab.style.display = asCanSeePayroll() ? '' : 'none';
   var calTab = document.getElementById('asTabCalendario');
   if (calTab) calTab.style.display = asCanSeeCalendar() ? '' : 'none';
   if (!asCanSeePayroll() && AS_ADMIN_TAB === 'nomina') AS_ADMIN_TAB = 'resumen';
   if (!asCanSeeCalendar() && AS_ADMIN_TAB === 'calendario') AS_ADMIN_TAB = 'resumen';
-  if (asIsAdminView() && !(u && u.role === 'worker')) asRenderAdmin();
+  if (showAdmin) asRenderAdmin();
   var pinInput = document.getElementById('asPinInput');
   if (pinInput && !u) {
     pinInput.onkeydown = function(e) { if (e.key === 'Enter') asTryPin(); };
@@ -3440,15 +3501,18 @@ function asRenderAdminResumen(list) {
   var today0 = new Date(); today0.setHours(0, 0, 0, 0);
   var today1 = new Date(); today1.setHours(23, 59, 59, 999);
   var users = getAsistenciaUsers();
-  list.innerHTML = '<p class="as-muted">Quién está: EN TURNO · PAUSA · SIN SALIDA. Sin GPS.</p>' + users.map(function(w) {
-    var s = asOpenShiftForPin(w.pin);
-    var pr = asPresence(s);
+  list.innerHTML = '<p class="as-muted">Entrar y Salir en la misma tarjeta. Si el turno está abierto: abierta / sin salida. Si ya tocó SALIR: hora de Salir, sin modal.</p>' + users.map(function(w) {
+    var open = asOpenShiftForPin(w.pin);
+    var s = open || asLastClosedShiftForPin(w.pin);
+    var pr = asPresence(open);
     var todayMs = asShiftsInRange(w.pin, today0, today1).reduce(function(a, x) { return a + asWorkedMs(x); }, 0);
-    var closeBtn = (s && !s.endedAt) ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + s.id + '\')">Registrar salida</button>' : '';
-    return '<div class="as-item"><div class="as-item-top"><b>' + esc(w.short || w.name || '—') + '</b><span class="badge ' + pr.badge + '">' + pr.label + '</span></div>' +
-      '<div class="as-grid2"><small><b>Entrada:</b> ' + (s ? asFmtDateTime(s.startedAt) : '—') + '</small>' +
-      '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small></div>' +
-      (s && asShiftNoteText(s) ? '<small><b>Hoy:</b> ' + esc(asShiftNoteText(s)) + '</small>' : '') + closeBtn + '</div>';
+    var closeBtn = (open && !open.endedAt) ? '<button type="button" class="btn btn-danger btn-sm" style="margin-top:.5rem" onclick="event.stopPropagation();asOpenAdminClose(\'' + open.id + '\')">Registrar salida</button>' : '';
+    var badge = open ? pr.badge : (s ? 'badge-green' : pr.badge);
+    var label = open ? 'abierta / sin salida' : (s ? 'cerrado' : pr.label);
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(w.short || w.name || '—') + '</b><span class="badge ' + badge + '">' + label + '</span></div>' +
+      asPunchTimesHtml(s) +
+      '<small><b>Horas hoy:</b> ' + asHoursLabel(todayMs) + '</small>' +
+      closeBtn + '</div>';
   }).join('');
 }
 function asRenderAdminCal(list) {
@@ -3469,11 +3533,14 @@ function asRenderAdminCal(list) {
   for (var i = 0; i < startPad; i++) cells += '<div class="as-cal-cell empty"></div>';
   for (var day = 1; day <= last; day++) {
     var dateStr = y + '-' + asPad(m + 1) + '-' + asPad(day);
-    var kind = asCalCellKind(dateStr, todayStr, asShiftsOnDay(all, dateStr));
+    var dayShifts = asShiftsOnDay(all, dateStr);
+    var kind = asCalCellKind(dateStr, todayStr, dayShifts);
     var cls = 'as-cal-cell ' + kind + (dateStr === todayStr ? ' today' : '');
     var click = 'onclick="asOpenCalDay(\'' + dateStr + '\')"';
     var label = kind === 'worked' ? 'trabajó' : kind === 'abierta' ? 'abierta' : kind === 'falta' ? 'falta' : '';
+    var hrsTxt = (kind === 'worked' || kind === 'abierta') ? asCalHoursText(dayShifts) : '';
     cells += '<div class="' + cls + '" ' + click + ' role="button" tabindex="0"><span>' + day + '</span>' +
+      (hrsTxt ? '<span class="as-cal-hrs">' + hrsTxt + '</span>' : '') +
       (label ? '<span class="as-cal-dot" title="' + label + '"></span>' : '') + '</div>';
   }
   list.innerHTML = '<p class="as-muted" style="margin-bottom:.5rem"><b>' + esc(w.name || 'Valeria Martínez-Calderón') + '</b> · asistencia del mes. Sin pesos.</p>' +
