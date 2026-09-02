@@ -266,4 +266,66 @@ if (html.indexOf('as-cal-hrs') === -1) throw new Error('calendar cells must show
 if (!/showAdmin[\s\S]*worker\.style\.display = \(u && !showAdmin\)/.test(html)) throw new Error('admin must not land on checador before timesheet');
 if (html.indexOf('asCanSeeRevenue') === -1) throw new Error('revenue gate must stay');
 
+var occChunk = html.match(/\/\* OCCUPANCY KPI[\s\S]*?\/\* END OCCUPANCY KPI \*\//);
+if (!occChunk) throw new Error('occupancy helpers missing from dashboard');
+eval(occChunk[0].replace(/\/\* OCCUPANCY KPI[\s\S]*?\*\/|\/\* END OCCUPANCY KPI \*\//g, ''));
+
+if (html.indexOf('bookedNightsYr') !== -1) throw new Error('old summed bookedNightsYr occupancy must be gone');
+if (/365 - norteNights/.test(html)) throw new Error('Reports available nights must use unique-night helper, not 365 - summed nights');
+if (html.indexOf('occUniqueNightsByUnit') === -1) throw new Error('unique-night occupancy helper missing');
+if (html.indexOf('occYearStats') === -1) throw new Error('occYearStats must drive Dashboard and Reports');
+if (!/function renderDashboard[\s\S]*occYearStats[\s\S]*function renderDashCharts/.test(html)) throw new Error('Dashboard occupancy must use occYearStats');
+if (!/function renderReports[\s\S]*occYearStats[\s\S]*norteAvail/.test(html)) throw new Error('Reports occupancy / Noches Disponibles must use unique nights');
+if (html.indexOf("getElementById('loginScreen')") === -1) throw new Error('welcome gate must stay');
+if (html.indexOf('assets/alora-login-mark.png') === -1) throw new Error('do not restyle welcome mark');
+
+var occFx = [
+  { rent: 'Carol', entrada: '2026-01-10', salida: '2026-02-28', depto: '1401 Sur', status: 'COMPLETADA', fuente: 'WhatsApp' },
+  { rent: 'CAROL DUP', entrada: '2026-01-10', salida: '2026-03-01', depto: '1401 Sur', status: 'COMPLETADA', fuente: 'Directo' },
+  { rent: 'Tío Pepe', entrada: '2026-02-01', salida: '2026-03-07', depto: '1204 Norte', status: 'COMPLETADA', fuente: 'Directo' },
+  { rent: 'PROPIETARIO', entrada: '2026-03-15', salida: '2026-03-31', depto: '1401 Sur', status: 'COMPLETADA', fuente: 'Mantenimiento' },
+  { rent: 'Remodelación Jacuzzi', entrada: '2026-04-12', salida: '2026-04-16', depto: '1404 Norte', status: 'COMPLETADA', fuente: 'WhatsApp' },
+  { rent: 'Remodelación de cocina', entrada: '2026-05-02', salida: '2026-05-13', depto: '1401 Sur', status: 'POR LLEGAR', fuente: 'WhatsApp' },
+  { rent: 'REMODELACION DE COCINA', entrada: '2026-05-04', salida: '2026-05-13', depto: '14S-Mantenimiento', status: 'Mantenimiento', fuente: 'Directo' },
+  { rent: 'Cancelada', entrada: '2026-06-01', salida: '2026-06-10', depto: '1404 Norte', status: 'CANCELADA', fuente: 'WhatsApp' },
+  { rent: 'Balta Gaytán', entrada: '2026-08-22', salida: '2026-08-25', depto: '1401 Sur', status: 'POR LLEGAR', fuente: 'Familia' },
+  { rent: 'Mauricio', entrada: '2026-12-30', salida: '2027-01-04', depto: '1404 Norte', status: 'POR LLEGAR', fuente: 'WhatsApp' },
+  { rent: 'New Year inbound', entrada: '2025-12-30', salida: '2026-01-03', depto: '1404 Norte', status: 'COMPLETADA', fuente: 'WhatsApp' }
+];
+if (occKpiUnit('1204 Norte') !== null) throw new Error('1204 must never be a KPI unit');
+if (occKpiUnit('14S-Mantenimiento') !== null) throw new Error('mantenimiento depto is not a KPI unit');
+if (occKpiUnit('1401 Sur') !== '1401 Sur' || occKpiUnit('1404 Norte') !== '1404 Norte') throw new Error('KPI units');
+if (occIsOccupancyStay(occFx[2])) throw new Error('1204 stay excluded');
+if (occIsOccupancyStay(occFx[3])) throw new Error('PROPIETARIO / fuente Mantenimiento excluded');
+if (occIsOccupancyStay(occFx[4]) || occIsOccupancyStay(occFx[5])) throw new Error('remodelación guest blocks excluded');
+if (occIsOccupancyStay(occFx[6])) throw new Error('Mantenimiento status + 14S depto excluded');
+if (occIsOccupancyStay(occFx[7])) throw new Error('CANCELADA excluded');
+if (!occIsOccupancyStay(occFx[8])) throw new Error('family Gaytán guest stay must count');
+
+var carolOnly = occUniqueNightsByUnit([occFx[0], occFx[1]], 2026);
+if (carolOnly.sur !== 50) throw new Error('overlapping Carol nights must be unique 50, got ' + carolOnly.sur);
+if (carolOnly.total !== 50) throw new Error('duplicate stays do not add');
+
+var ny = occUniqueNightsByUnit([occFx[9]], 2026);
+if (ny.norte !== 2) throw new Error('Dec 30–Jan 4 must clip to 2 nights in 2026, got ' + ny.norte);
+var ny27 = occUniqueNightsByUnit([occFx[9]], 2027);
+if (ny27.norte !== 3) throw new Error('same stay must count 3 nights in 2027');
+var inbound = occUniqueNightsByUnit([occFx[10]], 2026);
+if (inbound.norte !== 2) throw new Error('2025–2026 stay clips to Jan 1–2 in 2026');
+
+var no1204 = occUniqueNightsByUnit(occFx, 2026);
+if (no1204.total !== 50 + 3 + 2 + 2) throw new Error('fixture total unique guest nights, got ' + no1204.total);
+
+if (occYearDenom() !== 730) throw new Error('year denom is 365×2');
+if (occYtdDenom(2026, '2026-09-01') !== 488) throw new Error('YTD through 2026-09-01 denom is 488');
+if (occElapsedDaysInYear(2026, '2026-09-01') !== 244) throw new Error('elapsed days through Sep 1');
+if (occAvailableNights(400, 365) !== 0) throw new Error('available nights cannot go negative');
+if (occAvailableNights(194, 365) !== 171) throw new Error('available = 365 - unique');
+
+var stats = occYearStats(occFx, 2026, '2026-09-01');
+if (stats.yearPct !== occRatePct(stats.full.total, 730)) throw new Error('year pct uses 730');
+if (stats.ytd.sur + stats.ytd.norte !== stats.ytd.total) throw new Error('ytd parts');
+if (stats.ytd.total > stats.full.total) throw new Error('YTD cannot exceed full year unique nights');
+if (stats.norteAvail + stats.surAvail !== 730 - stats.full.total) throw new Error('available nights pair with unique occupied');
+
 console.log('as-alora-checklist.test.js ok');
