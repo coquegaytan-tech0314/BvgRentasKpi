@@ -180,4 +180,90 @@ if (asWelcomeLoginKind('team', 'team') !== 'admin') throw new Error('team passwo
 if (asWelcomeLoginKind('nope', 'team') !== 'reject') throw new Error('wrong password stays out');
 if (asWelcomeLoginKind('', 'team') !== 'reject') throw new Error('empty password stays out');
 
+function asLastClosedShiftFromList(list, pin) {
+  var closed = (list || []).filter(function(s) {
+    return s && String(s.userPin) === String(pin) && s.endedAt;
+  });
+  closed.sort(function(a, b) { return (b.endedAt || 0) - (a.endedAt || 0); });
+  return closed[0] || null;
+}
+function asDisplayShiftFromList(list, pin) {
+  var open = (list || []).filter(function(s) {
+    return s && String(s.userPin) === String(pin) && !s.endedAt;
+  });
+  open.sort(function(a, b) { return (b.startedAt || 0) - (a.startedAt || 0); });
+  return open[0] || asLastClosedShiftFromList(list, pin);
+}
+function asPunchSalirLabel(s, fmtEnded) {
+  if (!s) return '—';
+  if (!s.endedAt) return 'abierta / sin salida';
+  return fmtEnded ? fmtEnded(s.endedAt) : String(s.endedAt);
+}
+function asCalHoursText(ms) {
+  if (!ms || ms <= 0) return '';
+  return (ms / 3600000).toFixed(1) + 'h';
+}
+
+var val31 = {
+  userPin: '2604',
+  startedAt: Date.parse('2026-08-31T08:05:00-06:00'),
+  endedAt: Date.parse('2026-08-31T14:08:00-06:00'),
+  durationMs: Date.parse('2026-08-31T14:08:00-06:00') - Date.parse('2026-08-31T08:05:00-06:00')
+};
+var val01 = {
+  userPin: '2604',
+  startedAt: Date.parse('2026-09-01T08:02:00-06:00'),
+  endedAt: Date.parse('2026-09-01T14:05:00-06:00'),
+  note: 'Actualización de reservas en Airbnb en departamento Sur',
+  durationMs: Date.parse('2026-09-01T14:05:00-06:00') - Date.parse('2026-09-01T08:02:00-06:00')
+};
+var kokeShift = { userPin: '0314', startedAt: 1, endedAt: 2 };
+var lastClosed = asLastClosedShiftFromList([val31, val01, kokeShift], '2604');
+if (!lastClosed || lastClosed.endedAt !== val01.endedAt) throw new Error('last closed must be Sep 1 SALIR');
+if (asPunchSalirLabel(lastClosed) !== String(val01.endedAt)) throw new Error('closed Salir is endedAt');
+if (asPunchSalirLabel({ startedAt: val01.startedAt }) !== 'abierta / sin salida') throw new Error('open Salir label');
+if (asPunchSalirLabel(null) !== '—') throw new Error('empty punch Salir');
+var openNow = { userPin: '2604', startedAt: Date.parse('2026-09-02T08:00:00-06:00'), endedAt: null };
+if (asDisplayShiftFromList([val31, val01, openNow], '2604').endedAt) throw new Error('open shift wins while in progress');
+if (asDisplayShiftFromList([val31, val01], '2604').endedAt !== val01.endedAt) throw new Error('after SALIR show last closed');
+if (asCalHoursText(6 * 3600000) !== '6.0h') throw new Error('calendar 6.0h');
+if (asCalHoursText(val01.durationMs) !== '6.1h' && asCalHoursText(val01.durationMs) !== '6.0h') {
+  if (asCalHoursText(val01.durationMs) !== (val01.durationMs / 3600000).toFixed(1) + 'h') throw new Error('calendar hours');
+}
+if (asCalHoursText(0) !== '') throw new Error('no hours on empty day');
+
+function asMexicoParts(ts) {
+  var d = new Date(ts);
+  var parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(d);
+  var map = {};
+  for (var i = 0; i < parts.length; i++) map[parts[i].type] = parts[i].value;
+  return map;
+}
+function asFmtDateTime(ts) {
+  if (!ts) return '—';
+  var p = asMexicoParts(ts);
+  return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute + ':' + p.second;
+}
+var mxSalir = Date.parse('2026-09-01T14:05:00-06:00');
+var mxEntrar = Date.parse('2026-09-01T08:02:00-06:00');
+if (asFmtDateTime(mxEntrar).indexOf('08:02') === -1) throw new Error('Mexico City Entrar must be 08:02 not UTC');
+if (asFmtDateTime(mxSalir).indexOf('14:05') === -1) throw new Error('Mexico City Salir must be 14:05 not UTC');
+if (html.indexOf('function asMexicoParts') === -1) throw new Error('asMexicoParts missing');
+if (!/function asFmtDateTime[\s\S]*asMexicoParts/.test(html)) throw new Error('asFmtDateTime must use Mexico City parts');
+
+if (html.indexOf('id="asLastPunchBanner"') === -1) throw new Error('admin last-punch banner missing');
+if (html.indexOf('function asLastClosedShiftForPin') === -1) throw new Error('asLastClosedShiftForPin missing');
+if (html.indexOf('function asRenderLastPunchBanner') === -1) throw new Error('asRenderLastPunchBanner missing');
+if (html.indexOf('function asPunchTimesHtml') === -1) throw new Error('asPunchTimesHtml missing');
+if (!/asRenderAdminResumen[\s\S]*asLastClosedShiftForPin/.test(html)) throw new Error('Resumen must fall back to last closed shift');
+if (!/asRenderAdminResumen[\s\S]*asPunchTimesHtml/.test(html)) throw new Error('Resumen must show Entrar and Salir together');
+if (html.indexOf('as-cal-hrs') === -1) throw new Error('calendar cells must show hours');
+if (!/showAdmin[\s\S]*worker\.style\.display = \(u && !showAdmin\)/.test(html)) throw new Error('admin must not land on checador before timesheet');
+if (html.indexOf('asCanSeeRevenue') === -1) throw new Error('revenue gate must stay');
+
 console.log('as-alora-checklist.test.js ok');
