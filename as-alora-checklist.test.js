@@ -232,6 +232,30 @@ if (asCalHoursText(val01.durationMs) !== '6.1h' && asCalHoursText(val01.duration
 }
 if (asCalHoursText(0) !== '') throw new Error('no hours on empty day');
 
+function asMexicoParts(ts) {
+  var d = new Date(ts);
+  var parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(d);
+  var map = {};
+  for (var i = 0; i < parts.length; i++) map[parts[i].type] = parts[i].value;
+  return map;
+}
+function asFmtDateTime(ts) {
+  if (!ts) return '—';
+  var p = asMexicoParts(ts);
+  return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute + ':' + p.second;
+}
+var mxSalir = Date.parse('2026-09-01T14:05:00-06:00');
+var mxEntrar = Date.parse('2026-09-01T08:02:00-06:00');
+if (asFmtDateTime(mxEntrar).indexOf('08:02') === -1) throw new Error('Mexico City Entrar must be 08:02 not UTC');
+if (asFmtDateTime(mxSalir).indexOf('14:05') === -1) throw new Error('Mexico City Salir must be 14:05 not UTC');
+if (html.indexOf('function asMexicoParts') === -1) throw new Error('asMexicoParts missing');
+if (!/function asFmtDateTime[\s\S]*asMexicoParts/.test(html)) throw new Error('asFmtDateTime must use Mexico City parts');
+
 if (html.indexOf('id="asLastPunchBanner"') === -1) throw new Error('admin last-punch banner missing');
 if (html.indexOf('function asLastClosedShiftForPin') === -1) throw new Error('asLastClosedShiftForPin missing');
 if (html.indexOf('function asRenderLastPunchBanner') === -1) throw new Error('asRenderLastPunchBanner missing');
