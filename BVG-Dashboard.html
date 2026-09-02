@@ -3743,6 +3743,136 @@ function daysBetween(a, b) {
   const d2 = new Date(b + 'T00:00:00');
   return Math.max(0, Math.round((d2 - d1) / 86400000));
 }
+
+/* OCCUPANCY KPI
+   Unique hotel nights on 1401 Sur + 1404 Norte only.
+   Check-in inclusive, check-out exclusive. Overlaps count once.
+   Never 1204 Norte (Tío Pepe). Never mantenimiento / PROPIETARIO / remodelación.
+   Year card denominator is always 365×2 = 730 (not leap). */
+function occFoldText(s) {
+  return String(s == null ? '' : s).toUpperCase();
+}
+function occYmdParts(s) {
+  if (!s) return null;
+  var m = String(s).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return { y: +m[1], m: +m[2], d: +m[3] };
+}
+function occPartsKey(p) {
+  return p.y + '-' + String(p.m).padStart(2, '0') + '-' + String(p.d).padStart(2, '0');
+}
+function occPartsCmp(a, b) {
+  if (a.y !== b.y) return a.y - b.y;
+  if (a.m !== b.m) return a.m - b.m;
+  return a.d - b.d;
+}
+function occMaxParts(a, b) { return occPartsCmp(a, b) >= 0 ? a : b; }
+function occMinParts(a, b) { return occPartsCmp(a, b) <= 0 ? a : b; }
+function occAddOneDay(p) {
+  var dt = new Date(p.y, p.m - 1, p.d + 1);
+  return { y: dt.getFullYear(), m: dt.getMonth() + 1, d: dt.getDate() };
+}
+function occLocalYmd(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function occKpiUnit(depto) {
+  var d = String(depto == null ? '' : depto);
+  if (/1204/.test(d)) return null;
+  if (/mantenimiento/i.test(d)) return null;
+  if (/1401/.test(d)) return '1401 Sur';
+  if (/1404/.test(d)) return '1404 Norte';
+  return null;
+}
+function occIsGuestStayStatus(status) {
+  var s = occFoldText(status);
+  return s === 'COMPLETADA' || s === 'EN CURSO' || s === 'POR LLEGAR';
+}
+function occIsMaintenanceBlock(b) {
+  if (!b) return true;
+  var status = occFoldText(b.status);
+  var depto = String(b.depto == null ? '' : b.depto);
+  var fuente = occFoldText(b.fuente);
+  var rent = occFoldText(b.rent);
+  if (status.indexOf('MANTENIMIENTO') >= 0) return true;
+  if (/mantenimiento/i.test(depto)) return true;
+  if (fuente.indexOf('MANTENIMIENTO') >= 0) return true;
+  if (rent.indexOf('PROPIETARIO') >= 0) return true;
+  if (rent.indexOf('REMODEL') >= 0) return true;
+  return false;
+}
+function occIsOccupancyStay(b) {
+  return !!(b && occKpiUnit(b.depto) && occIsGuestStayStatus(b.status) && !occIsMaintenanceBlock(b));
+}
+function occYearDenom() { return 365 * 2; }
+function occElapsedDaysInYear(year, asOfYmd) {
+  var asOf = occYmdParts(asOfYmd);
+  if (!asOf || asOf.y !== year) {
+    if (asOf && asOf.y > year) return 365;
+    return 0;
+  }
+  var start = new Date(year, 0, 1);
+  var end = new Date(asOf.y, asOf.m - 1, asOf.d);
+  var days = Math.round((end - start) / 86400000) + 1;
+  if (days < 0) return 0;
+  if (days > 365) return 365;
+  return days;
+}
+function occYtdDenom(year, asOfYmd) { return occElapsedDaysInYear(year, asOfYmd) * 2; }
+function occRatePct(nights, denom) {
+  if (!denom) return '0.0';
+  return ((nights / denom) * 100).toFixed(1);
+}
+function occUniqueNightsByUnit(bookings, year, asOfInclusiveYmd) {
+  var sets = { '1401 Sur': {}, '1404 Norte': {} };
+  var yearStart = { y: year, m: 1, d: 1 };
+  var yearEnd = { y: year + 1, m: 1, d: 1 };
+  var clipEnd = yearEnd;
+  if (asOfInclusiveYmd) {
+    var asOf = occYmdParts(asOfInclusiveYmd);
+    if (asOf) clipEnd = occMinParts(yearEnd, occAddOneDay(asOf));
+  }
+  (bookings || []).forEach(function(b) {
+    if (!occIsOccupancyStay(b)) return;
+    var unit = occKpiUnit(b.depto);
+    var cin = occYmdParts(b.entrada);
+    var cout = occYmdParts(b.salida);
+    if (!cin || !cout) return;
+    var start = occMaxParts(cin, yearStart);
+    var end = occMinParts(cout, clipEnd);
+    if (occPartsCmp(end, start) <= 0) return;
+    for (var p = start; occPartsCmp(p, end) < 0; p = occAddOneDay(p)) {
+      sets[unit][occPartsKey(p)] = 1;
+    }
+  });
+  var sur = Object.keys(sets['1401 Sur']).length;
+  var norte = Object.keys(sets['1404 Norte']).length;
+  return { '1401 Sur': sur, '1404 Norte': norte, sur: sur, norte: norte, total: sur + norte };
+}
+function occAvailableNights(occupied, yearDays) {
+  yearDays = yearDays == null ? 365 : yearDays;
+  return Math.max(0, yearDays - (occupied || 0));
+}
+function occYearStats(bookings, year, asOfYmd) {
+  var full = occUniqueNightsByUnit(bookings, year);
+  var ytd = occUniqueNightsByUnit(bookings, year, asOfYmd || occLocalYmd());
+  var yearDen = occYearDenom();
+  var ytdDen = occYtdDenom(year, asOfYmd || occLocalYmd());
+  return {
+    year: year,
+    full: full,
+    ytd: ytd,
+    yearDenom: yearDen,
+    ytdDenom: ytdDen,
+    yearPct: occRatePct(full.total, yearDen),
+    ytdPct: occRatePct(ytd.total, ytdDen),
+    nortePct: occRatePct(full.norte, 365),
+    surPct: occRatePct(full.sur, 365),
+    norteAvail: occAvailableNights(full.norte, 365),
+    surAvail: occAvailableNights(full.sur, 365)
+  };
+}
+/* END OCCUPANCY KPI */
 function statusBadge(s) {
   const map = {
     'COMPLETADA': 'badge-green',
@@ -3891,9 +4021,8 @@ function renderDashboard() {
   const gastos2026 = expenses2026.reduce((s, e) => s + (e.cantidad || 0), 0);
   const gastosTotal = expenses.reduce((s, e) => s + (e.cantidad || 0), 0);
 
-  const bookedNightsYr = bookings.filter(b => b.entrada && b.entrada.startsWith(String(yr)) && ['COMPLETADA','EN CURSO','POR LLEGAR'].includes(b.status) && !b.depto.includes('Mantenimiento'))
-    .reduce((s, b) => s + daysBetween(b.entrada, b.salida), 0);
-  const occupancy = ((bookedNightsYr / (365 * 2)) * 100).toFixed(1);
+  const occ = occYearStats(bookings, yr);
+  const occupancy = occ.yearPct;
 
   const netos = ventas2026 - gastos2026;
   const active = bookings.filter(b => b.status === 'EN CURSO').length;
@@ -3940,9 +4069,10 @@ function renderDashboard() {
     '</div>';
   }
   kpiHtml +=
-    '<div class="kpi-card kpi-occupancy" data-tooltip="Ocupación '+yr+'" onclick="showSection(\'reportes\')">' +
+    '<div class="kpi-card kpi-occupancy" data-tooltip="Noches únicas 1401 Sur + 1404 Norte. Sin 1204, sin mantenimiento, sin duplicados. Año = 730 noches. YTD = días transcurridos × 2." onclick="showSection(\'reportes\')">' +
       '<div class="kpi-label">Tasa de Ocupación '+yr+'</div>' +
       '<div class="kpi-value" style="color:var(--teal)">' + occupancy + '%</div>' +
+      '<div class="kpi-sub">' + occ.full.total + ' / ' + occ.yearDenom + ' noches · YTD ' + occ.ytdPct + '%</div>' +
     '</div>';
   if (seeRev) {
     kpiHtml +=
@@ -5491,11 +5621,10 @@ function renderReports() {
     }
   });
 
-  // Occupancy by apartment
-  const norteNights = bookings.filter(b => b.depto === '1404 Norte' && ['COMPLETADA','EN CURSO','POR LLEGAR'].includes(b.status) && b.entrada && b.entrada.startsWith(String(yr)))
-    .reduce((s, b) => s + daysBetween(b.entrada, b.salida), 0);
-  const surNights = bookings.filter(b => b.depto === '1401 Sur' && ['COMPLETADA','EN CURSO','POR LLEGAR'].includes(b.status) && b.entrada && b.entrada.startsWith(String(yr)))
-    .reduce((s, b) => s + daysBetween(b.entrada, b.salida), 0);
+  // Occupancy by apartment — unique nights, 1401+1404 only, no mantenimiento
+  const occ = occYearStats(bookings, yr);
+  const norteNights = occ.full.norte;
+  const surNights = occ.full.sur;
 
   destroyChart('chartOcupacion');
   chartInstances['chartOcupacion'] = new Chart(document.getElementById('chartOcupacion'), {
@@ -5504,7 +5633,7 @@ function renderReports() {
       labels: ['1404 Norte', '1401 Sur'],
       datasets: [
         { label: 'Noches Ocupadas', data: [norteNights, surNights], backgroundColor: ['#FF385C','#82C7E8'], borderRadius: 8 },
-        { label: 'Noches Disponibles', data: [365 - norteNights, 365 - surNights], backgroundColor: ['rgba(59,130,246,.15)','rgba(168,85,247,.15)'], borderRadius: 8 }
+        { label: 'Noches Disponibles', data: [occ.norteAvail, occ.surAvail], backgroundColor: ['rgba(59,130,246,.15)','rgba(168,85,247,.15)'], borderRadius: 8 }
       ]
     },
     options: {
@@ -5644,8 +5773,8 @@ function renderReports() {
       '<div class="kpi-sub">Norte: ' + norteCompleted.length + ' · Sur: ' + surCompleted.length + '</div>' +
     '</div>' +
     '<div class="kpi-card">' +
-      '<div class="kpi-label">Ocupación ' + yr + '</div><div class="kpi-value" style="color:var(--teal)">' + (((norteNights + surNights) / 730) * 100).toFixed(1) + '%</div>' +
-      '<div class="kpi-sub">Norte: ' + ((norteNights / 365) * 100).toFixed(1) + '% · Sur: ' + ((surNights / 365) * 100).toFixed(1) + '%</div>' +
+      '<div class="kpi-label">Ocupación ' + yr + '</div><div class="kpi-value" style="color:var(--teal)">' + occ.yearPct + '%</div>' +
+      '<div class="kpi-sub">Norte: ' + occ.nortePct + '% · Sur: ' + occ.surPct + '% · YTD ' + occ.ytdPct + '%</div>' +
     '</div>';
   document.getElementById('reportKPIs').innerHTML = reportHtml;
 }
