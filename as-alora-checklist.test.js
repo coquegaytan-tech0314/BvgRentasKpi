@@ -266,6 +266,54 @@ if (html.indexOf('as-cal-hrs') === -1) throw new Error('calendar cells must show
 if (!/showAdmin[\s\S]*worker\.style\.display = \(u && !showAdmin\)/.test(html)) throw new Error('admin must not land on checador before timesheet');
 if (html.indexOf('asCanSeeRevenue') === -1) throw new Error('revenue gate must stay');
 
+var AS_FOTO_MIN_EDGE = 480;
+var AS_FOTO_MIN_QUALITY = 0.42;
+var AS_FOTO_MAX_DATAURL = 210 * 1024;
+function asIsLikelyImageFile(f) {
+  if (!f) return false;
+  var t = String(f.type || '').toLowerCase();
+  var n = String(f.name || '').toLowerCase();
+  if (!t) return true;
+  if (t.indexOf('image/') === 0) return true;
+  if (t === 'application/octet-stream' || t === 'application/heic' || t === 'application/heif') {
+    return !n || /\.(heic|heif|jpe?g|png|webp|gif|bmp|tif{1,2})$/.test(n);
+  }
+  return /\.(heic|heif)$/.test(n);
+}
+function asDataUrlBytes(url) {
+  if (!url) return 0;
+  return String(url).length;
+}
+function asNextFotoEncodeStep(edge, quality) {
+  if (quality > AS_FOTO_MIN_QUALITY + 0.01) {
+    return { edge: edge, quality: Math.max(AS_FOTO_MIN_QUALITY, +(quality - 0.12).toFixed(2)) };
+  }
+  return { edge: Math.max(AS_FOTO_MIN_EDGE, Math.round(edge * 0.78)), quality: quality };
+}
+if (!asIsLikelyImageFile({ type: '', name: 'IMG_1234.HEIC' })) throw new Error('empty MIME must be accepted');
+if (!asIsLikelyImageFile({ type: 'image/heic', name: 'IMG_1234.HEIC' })) throw new Error('HEIC MIME must be accepted');
+if (!asIsLikelyImageFile({ type: 'image/heif', name: 'scan.heif' })) throw new Error('HEIF MIME must be accepted');
+if (!asIsLikelyImageFile({ type: 'application/octet-stream', name: 'captura.heic' })) throw new Error('octet-stream HEIC must be accepted');
+if (!asIsLikelyImageFile({ type: 'image/jpeg', name: 'captura.jpg' })) throw new Error('JPEG must be accepted');
+if (asIsLikelyImageFile({ type: 'application/pdf', name: 'nota.pdf' })) throw new Error('PDF must be rejected');
+if (asDataUrlBytes('data:image/jpeg;base64,xxxx') !== 'data:image/jpeg;base64,xxxx'.length) throw new Error('data URL length is the write budget');
+var stepQ = asNextFotoEncodeStep(1280, 0.7);
+if (stepQ.edge !== 1280 || stepQ.quality !== 0.58) throw new Error('first budget step lowers quality');
+var stepE = asNextFotoEncodeStep(1280, 0.42);
+if (stepE.edge !== Math.round(1280 * 0.78) || stepE.quality !== 0.42) throw new Error('later budget step lowers edge');
+if (html.indexOf('id="asEndFotoCam"') === -1 || html.indexOf('id="asEndFotoGal"') === -1) throw new Error('SALIR modal must accept a captura');
+if (html.indexOf('id="asEndThumbs"') === -1) throw new Error('SALIR modal must show thumbs');
+if (html.indexOf('function asPickEndFoto') === -1) throw new Error('asPickEndFoto missing');
+if (html.indexOf('function asEncodeUntilBudget') === -1) throw new Error('size-budget encoder missing');
+if (html.indexOf('AS_FOTO_MAX_DATAURL') === -1) throw new Error('foto data-URL budget missing');
+if (html.indexOf('No se pudo guardar la foto — intenta otra más liviana') === -1) throw new Error('shift save failure must toast');
+if (html.indexOf('asShiftSaveFailToast') === -1) throw new Error('asShiftSaveFailToast missing');
+if (html.indexOf('image/heic') === -1) throw new Error('file pickers must accept HEIC');
+if (html.indexOf('function asIsLikelyImageFile') === -1) throw new Error('asIsLikelyImageFile missing from dashboard');
+if (html.indexOf('_asPendingShiftSync') === -1) throw new Error('failed Firebase shift write must not silently wipe local thumbs');
+if (!/function asHandleDayPhoto[\s\S]*asIsLikelyImageFile[\s\S]*asFotoFailToast/.test(html)) throw new Error('day photo path must accept HEIC/empty type and toast on fail');
+if (!/function saveData[\s\S]*asShiftSaveFailToast/.test(html)) throw new Error('saveData must toast shift write failures');
+
 var occChunk = html.match(/\/\* OCCUPANCY KPI[\s\S]*?\/\* END OCCUPANCY KPI \*\//);
 if (!occChunk) throw new Error('occupancy helpers missing from dashboard');
 eval(occChunk[0].replace(/\/\* OCCUPANCY KPI[\s\S]*?\*\/|\/\* END OCCUPANCY KPI \*\//g, ''));
