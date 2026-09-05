@@ -705,8 +705,8 @@ function aloraApplyWindowSeason() {
                 <button type="button" class="btn btn-primary as-full-btn" onclick="document.getElementById('asFotoCam').click()">📷 TOMAR FOTO</button>
                 <button type="button" class="btn btn-outline as-full-btn" onclick="document.getElementById('asFotoGal').click()">🖼 GALERÍA</button>
               </div>
-              <input type="file" id="asFotoCam" accept="image/*" capture="environment" style="position:absolute;left:-9999px;width:1px;height:1px" onchange="asHandleDayPhoto(this)">
-              <input type="file" id="asFotoGal" accept="image/*" multiple style="position:absolute;left:-9999px;width:1px;height:1px" onchange="asHandleDayPhoto(this)">
+              <input type="file" id="asFotoCam" accept="image/*,image/jpeg,image/png,image/webp,.heic,.heif,image/heic,image/heif" capture="environment" style="position:absolute;left:-9999px;width:1px;height:1px" onchange="asHandleDayPhoto(this)">
+              <input type="file" id="asFotoGal" accept="image/*,image/jpeg,image/png,image/webp,.heic,.heif,image/heic,image/heif" multiple style="position:absolute;left:-9999px;width:1px;height:1px" onchange="asHandleDayPhoto(this)">
               <p class="as-muted" id="asFotoCount" style="margin-top:.5rem">0 / 6 fotos</p>
               <div id="asDayThumbs" class="as-thumbs"></div>
             </div>
@@ -1096,6 +1096,14 @@ function aloraApplyWindowSeason() {
         <textarea id="asEndNote" rows="3" placeholder="Opcional — puedes dejarlo vacío"></textarea>
       </div>
       <p class="as-muted" id="asEndFotoHint">0 fotos en este turno</p>
+      <div class="as-foto-actions" style="margin-top:.5rem">
+        <button type="button" class="btn btn-primary as-full-btn" onclick="asPickEndFoto('cam')">📷 TOMAR FOTO</button>
+        <button type="button" class="btn btn-outline as-full-btn" onclick="asPickEndFoto('gal')">🖼 GALERÍA</button>
+      </div>
+      <input type="file" id="asEndFotoCam" accept="image/*,image/jpeg,image/png,image/webp,.heic,.heif,image/heic,image/heif" capture="environment" style="position:absolute;left:-9999px;width:1px;height:1px" onchange="asHandleDayPhoto(this)">
+      <input type="file" id="asEndFotoGal" accept="image/*,image/jpeg,image/png,image/webp,.heic,.heif,image/heic,image/heif" multiple style="position:absolute;left:-9999px;width:1px;height:1px" onchange="asHandleDayPhoto(this)">
+      <div id="asEndThumbs" class="as-thumbs"></div>
+      <p class="as-muted" style="margin-top:.45rem">Puedes adjuntar una captura ahora, antes de salir.</p>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('asEndModal')">Regresar</button>
@@ -1152,7 +1160,7 @@ function aloraApplyWindowSeason() {
           <select id="asPetUrg"><option>Normal</option><option>Hoy</option><option>Urgente</option></select>
         </div>
         <div class="form-group full"><label>Foto (opcional)</label>
-          <input type="file" id="asPetFoto" accept="image/*" capture="environment" onchange="asHandlePetPhoto(this)">
+          <input type="file" id="asPetFoto" accept="image/*,image/jpeg,image/png,image/webp,.heic,.heif,image/heic,image/heif" capture="environment" onchange="asHandlePetPhoto(this)">
           <img id="asPetPrev" class="as-thumb" style="display:none" alt="">
           <input type="hidden" id="asPetFotoData">
         </div>
@@ -1272,6 +1280,7 @@ const STORAGE_KEYS = {
 var _firebaseDB = null;
 var _firebaseReady = false;
 var _firebaseSyncPaused = false; // prevents loops when receiving remote updates
+var _asPendingShiftSync = null; // local bvg_shifts JSON that failed to reach Firebase
 
 // Keys that should sync to Firebase (shared data)
 var SYNC_KEYS = [
@@ -1344,9 +1353,20 @@ var SYNC_KEYS = [
         if (_firebaseSyncPaused) return;
         var val = snapshot.val();
         if (val !== null && val !== undefined) {
+          var incoming = typeof val === 'string' ? val : JSON.stringify(val);
+          // A failed Firebase write can leave stale remote data. Don't let that
+          // wipe a local thumb Valerie just saved.
+          if (key === 'bvg_shifts' && _asPendingShiftSync && (Date.now() - _asPendingShiftSync.at) < 180000) {
+            if (incoming !== _asPendingShiftSync.raw && incoming.length < _asPendingShiftSync.raw.length) {
+              _firebaseDB.ref('bvg/' + key).set(_asPendingShiftSync.raw).catch(function(e) {
+                console.warn('BVG: Error al reintentar turno en Firebase:', e);
+              });
+              return;
+            }
+          }
           // Save to localStorage without triggering Firebase write-back
           _firebaseSyncPaused = true;
-          localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+          localStorage.setItem(key, incoming);
           _firebaseSyncPaused = false;
 
           // Refresh the current view so changes appear
@@ -1452,15 +1472,39 @@ function _refreshCurrentView() {
 function loadData(key) {
   try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; }
 }
+function asShiftSaveFailToast() {
+  showToast('No se pudo guardar la foto — intenta otra más liviana', 'error', 5000);
+}
 function saveData(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
+  var raw;
+  try {
+    raw = JSON.stringify(data);
+  } catch (e) {
+    console.warn('BVG: Error al serializar:', e);
+    if (key === STORAGE_KEYS.shifts) asShiftSaveFailToast();
+    return false;
+  }
+  try {
+    localStorage.setItem(key, raw);
+  } catch (e) {
+    console.warn('BVG: Error al guardar local:', e);
+    if (key === STORAGE_KEYS.shifts) asShiftSaveFailToast();
+    return false;
+  }
 
   // Sync to Firebase if connected and this key should sync
   if (_firebaseReady && !_firebaseSyncPaused && SYNC_KEYS.indexOf(key) >= 0) {
-    _firebaseDB.ref('bvg/' + key).set(JSON.stringify(data)).catch(function(e) {
+    _firebaseDB.ref('bvg/' + key).set(raw).then(function() {
+      if (key === STORAGE_KEYS.shifts) _asPendingShiftSync = null;
+    }).catch(function(e) {
       console.warn('BVG: Error al guardar en Firebase:', e);
+      if (key === STORAGE_KEYS.shifts) {
+        _asPendingShiftSync = { raw: raw, at: Date.now() };
+        asShiftSaveFailToast();
+      }
     });
   }
+  return true;
 }
 
 // Password (synced via Firebase)
@@ -1970,6 +2014,9 @@ var AS_DAY_CHIPS = ['Cliente', 'WhatsApp', 'Limpieza coord', 'Recados', 'Visita 
 var AS_FOTO_MAX = 6;
 var AS_FOTO_MAX_EDGE = 1280;
 var AS_FOTO_QUALITY = 0.7;
+var AS_FOTO_MAX_DATAURL = 210 * 1024; // ~180–220KB data-URL budget so bvg_shifts still writes
+var AS_FOTO_MIN_EDGE = 480;
+var AS_FOTO_MIN_QUALITY = 0.42;
 var AS_ADMIN_TAB = 'resumen';
 var AS_SESSION_KEY = 'bvg_activa_session';
 var AS_SHIFT_KEY = 'bvg_activa_shift';
@@ -1995,7 +2042,7 @@ function getAsistenciaUsers() {
 function saveAsistenciaUsers(users) { saveData(STORAGE_KEYS.asistenciaPins, users); }
 
 function getAsistenciaShifts() { return loadData(STORAGE_KEYS.shifts) || []; }
-function saveAsistenciaShifts(list) { saveData(STORAGE_KEYS.shifts, list); }
+function saveAsistenciaShifts(list) { return saveData(STORAGE_KEYS.shifts, list); }
 function getAsistenciaClients() { return loadData(STORAGE_KEYS.asistenciaClients) || []; }
 function saveAsistenciaClients(list) { saveData(STORAGE_KEYS.asistenciaClients, list); }
 function getAsistenciaClockExpenses() { return loadData(STORAGE_KEYS.asistenciaExpenses) || []; }
@@ -2243,8 +2290,12 @@ function asReadActiveFallback() {
   try { return JSON.parse(localStorage.getItem(AS_SHIFT_KEY)); } catch (e) { return null; }
 }
 function asWriteActiveFallback(s) {
-  if (s && !s.endedAt) localStorage.setItem(AS_SHIFT_KEY, JSON.stringify(s));
-  else localStorage.removeItem(AS_SHIFT_KEY);
+  try {
+    if (s && !s.endedAt) localStorage.setItem(AS_SHIFT_KEY, JSON.stringify(s));
+    else localStorage.removeItem(AS_SHIFT_KEY);
+  } catch (e) {
+    console.warn('BVG: fallback de turno no se guardó', e);
+  }
 }
 function asHydrateActiveFallback() {
   var snap = asReadActiveFallback();
@@ -2428,12 +2479,13 @@ function asCalHoursText(shiftsOnDay) {
   return (ms / 3600000).toFixed(1) + 'h';
 }
 function asPersistShift(s) {
-  saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
+  var ok = saveAsistenciaShifts(asUpsertById(getAsistenciaShifts(), s));
   if (s && !s.endedAt) asWriteActiveFallback(s);
   else {
     var snap = asReadActiveFallback();
     if (snap && s && snap.id === s.id) asWriteActiveFallback(null);
   }
+  return ok !== false;
 }
 
 function asTryPin() {
@@ -2514,11 +2566,8 @@ function asConfirmEndShift() {
   s = asActiveShift() || s;
   var endNote = document.getElementById('asEndNote');
   if (endNote) endNote.value = asShiftNoteText(s);
-  var hint = document.getElementById('asEndFotoHint');
-  if (hint) {
-    var n = asShiftFotos(s).length;
-    hint.textContent = n ? (n + ' foto' + (n === 1 ? '' : 's') + ' en este turno') : 'Sin fotos en este turno';
-  }
+  _asDayPhotos = asShiftFotos(s);
+  asRenderEndFotos();
   openModal('asEndModal');
 }
 
@@ -3293,25 +3342,111 @@ function asUpdateWorkerBadges() {
   var ob = document.getElementById('asOtBadge'); if (ob) ob.textContent = ot.length;
 }
 
-function asCompressImage(file, maxDim, quality) {
+function asIsLikelyImageFile(f) {
+  if (!f) return false;
+  var t = String(f.type || '').toLowerCase();
+  var n = String(f.name || '').toLowerCase();
+  if (!t) return true;
+  if (t.indexOf('image/') === 0) return true;
+  if (t === 'application/octet-stream' || t === 'application/heic' || t === 'application/heif') {
+    return !n || /\.(heic|heif|jpe?g|png|webp|gif|bmp|tif{1,2})$/.test(n);
+  }
+  return /\.(heic|heif)$/.test(n);
+}
+function asDataUrlBytes(url) {
+  if (!url) return 0;
+  return String(url).length;
+}
+function asNextFotoEncodeStep(edge, quality) {
+  if (quality > AS_FOTO_MIN_QUALITY + 0.01) {
+    return { edge: edge, quality: Math.max(AS_FOTO_MIN_QUALITY, +(quality - 0.12).toFixed(2)) };
+  }
+  return { edge: Math.max(AS_FOTO_MIN_EDGE, Math.round(edge * 0.78)), quality: quality };
+}
+function asFotoFailToast(err) {
+  var msg = err && err.message ? String(err.message) : '';
+  if (msg === 'decode') {
+    showToast('No se pudo leer la foto. Si es HEIC, toma otra o elige una captura/JPEG.', 'error', 5000);
+  } else if (msg === 'read') {
+    showToast('No se pudo abrir el archivo. Elige otra foto de la galería.', 'error', 4500);
+  } else {
+    showToast('No se pudo leer la foto. Prueba otra captura más liviana.', 'error', 4500);
+  }
+}
+function asRevokeBlobUrl(url) {
+  try { if (url && String(url).indexOf('blob:') === 0) URL.revokeObjectURL(url); } catch (e) {}
+}
+function asLoadImageFromSrc(src) {
   return new Promise(function(resolve, reject) {
-    var r = new FileReader();
-    r.onload = function() {
-      var img = new Image();
-      img.onload = function() {
-        var w = img.width, h = img.height;
-        var sc = Math.min(1, maxDim / Math.max(w, h));
-        w = Math.round(w * sc); h = Math.round(h * sc);
-        var c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', quality));
-      };
-      img.onerror = reject;
-      img.src = r.result;
-    };
-    r.onerror = reject;
-    r.readAsDataURL(file);
+    var img = new Image();
+    img.onload = function() { resolve(img); };
+    img.onerror = function() { reject(new Error('decode')); };
+    img.src = src;
+  });
+}
+function asLoadImageFile(file) {
+  var tryBitmap = function() {
+    if (typeof createImageBitmap !== 'function') return Promise.reject(new Error('no-bitmap'));
+    var opts = { imageOrientation: 'from-image' };
+    return Promise.resolve().then(function() { return createImageBitmap(file, opts); })
+      .catch(function() { return createImageBitmap(file); });
+  };
+  var tryObjectUrl = function() {
+    var url = URL.createObjectURL(file);
+    return asLoadImageFromSrc(url).then(function(img) {
+      asRevokeBlobUrl(url);
+      return img;
+    }, function(err) {
+      asRevokeBlobUrl(url);
+      throw err;
+    });
+  };
+  var tryReader = function() {
+    return new Promise(function(resolve, reject) {
+      var r = new FileReader();
+      r.onload = function() { asLoadImageFromSrc(r.result).then(resolve, reject); };
+      r.onerror = function() { reject(new Error('read')); };
+      r.readAsDataURL(file);
+    });
+  };
+  return tryBitmap().catch(function() { return tryObjectUrl(); }).catch(function() { return tryReader(); });
+}
+function asDrawJpeg(img, edge, quality) {
+  var w = img.width || img.naturalWidth || 0;
+  var h = img.height || img.naturalHeight || 0;
+  if (!w || !h) throw new Error('empty');
+  var sc = Math.min(1, edge / Math.max(w, h));
+  w = Math.max(1, Math.round(w * sc));
+  h = Math.max(1, Math.round(h * sc));
+  var c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  var ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', quality);
+}
+function asEncodeUntilBudget(img, maxDim, quality) {
+  var edge = maxDim || AS_FOTO_MAX_EDGE;
+  var q = quality == null ? AS_FOTO_QUALITY : quality;
+  var last = '';
+  for (var i = 0; i < 8; i++) {
+    last = asDrawJpeg(img, edge, q);
+    if (asDataUrlBytes(last) <= AS_FOTO_MAX_DATAURL) return last;
+    var next = asNextFotoEncodeStep(edge, q);
+    if (next.edge === edge && next.quality === q) break;
+    edge = next.edge;
+    q = next.quality;
+  }
+  return last;
+}
+function asCompressImage(file, maxDim, quality) {
+  return asLoadImageFile(file).then(function(img) {
+    var url = asEncodeUntilBudget(img, maxDim, quality);
+    if (img && img.close) try { img.close(); } catch (e) {}
+    if (!url || url.length < 32) throw new Error('empty');
+    return url;
   });
 }
 function asRenderDayNoteForm(s) {
@@ -3325,20 +3460,44 @@ function asUpdateFotoCount() {
   var el = document.getElementById('asFotoCount');
   if (el) el.textContent = _asDayPhotos.length + ' / ' + AS_FOTO_MAX + ' fotos';
 }
+function asRenderEndFotos() {
+  var hint = document.getElementById('asEndFotoHint');
+  var box = document.getElementById('asEndThumbs');
+  var n = _asDayPhotos.length;
+  if (hint) {
+    hint.textContent = n
+      ? (n + ' foto' + (n === 1 ? '' : 's') + ' en este turno')
+      : 'Sin fotos en este turno — puedes agregar una ahora';
+  }
+  if (box) box.innerHTML = asFotosHtml(_asDayPhotos, true);
+}
+function asPickEndFoto(kind) {
+  if (!asActiveShift()) { showToast('Primero entra al turno', 'info'); return; }
+  var el = document.getElementById(kind === 'cam' ? 'asEndFotoCam' : 'asEndFotoGal');
+  if (el) el.click();
+}
 function asRenderDayThumbs() {
   var box = document.getElementById('asDayThumbs');
-  if (!box) return;
-  box.innerHTML = asFotosHtml(_asDayPhotos, true);
+  if (box) box.innerHTML = asFotosHtml(_asDayPhotos, true);
   asUpdateFotoCount();
+  asRenderEndFotos();
 }
 function asPersistFotos() {
   var s = asActiveShift();
-  if (!s) return;
+  if (!s) return false;
   s.fotos = _asDayPhotos.slice();
   if (s.dayReport) s.dayReport.photos = s.fotos.slice();
+  var endModal = document.getElementById('asEndModal');
+  var endNote = document.getElementById('asEndNote');
   var el = document.getElementById('asShiftNote');
-  if (el) { s.note = el.value; s.queHice = el.value.trim(); }
-  asPersistShift(s);
+  if (endModal && endModal.classList.contains('show') && endNote) {
+    s.note = endNote.value;
+    s.queHice = endNote.value.trim();
+  } else if (el) {
+    s.note = el.value;
+    s.queHice = el.value.trim();
+  }
+  return asPersistShift(s);
 }
 function asRemoveDayPhoto(i) {
   if (!asActiveShift()) return;
@@ -3355,14 +3514,23 @@ function asHandleDayPhoto(input) {
     if (idx >= files.length) return;
     if (_asDayPhotos.length >= AS_FOTO_MAX) { showToast('Máximo ' + AS_FOTO_MAX + ' fotos', 'info'); return; }
     var f = files[idx];
-    if (!f || (f.type && f.type.indexOf('image/') !== 0)) { next(idx + 1); return; }
+    if (!asIsLikelyImageFile(f)) {
+      showToast('Ese archivo no parece una foto. Elige JPEG, PNG o una captura.', 'error', 4500);
+      next(idx + 1);
+      return;
+    }
     asCompressImage(f, AS_FOTO_MAX_EDGE, AS_FOTO_QUALITY).then(function(url) {
       if (_asDayPhotos.length >= AS_FOTO_MAX) return;
       _asDayPhotos.push(url);
       asRenderDayThumbs();
-      asPersistFotos();
+      if (asPersistFotos() === false) {
+        _asDayPhotos.pop();
+        asRenderDayThumbs();
+        return;
+      }
+      showToast('Foto guardada', 'success', 1500);
       next(idx + 1);
-    }).catch(function() { showToast('No se pudo leer la foto', 'error'); next(idx + 1); });
+    }).catch(function(err) { asFotoFailToast(err); next(idx + 1); });
   }
   next(0);
 }
@@ -3449,7 +3617,7 @@ function asHandlePetPhoto(input) {
     document.getElementById('asPetFotoData').value = url;
     var img = document.getElementById('asPetPrev');
     img.src = url; img.style.display = '';
-  }).catch(function() { showToast('No se pudo leer la foto', 'error'); });
+  }).catch(function(err) { asFotoFailToast(err); });
 }
 function asSavePeticion() {
   var u = asCurrentUser();
