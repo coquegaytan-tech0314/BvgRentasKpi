@@ -59,6 +59,7 @@ function aloraApplyWindowSeason() {
 <!-- Firebase SDK (compat for no-build-tool usage) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -1278,6 +1279,7 @@ const STORAGE_KEYS = {
    See setup guide for step-by-step instructions.
    ============================================================ */
 var _firebaseDB = null;
+var _firebaseStorage = null;
 var _firebaseReady = false;
 var _firebaseSyncPaused = false; // prevents loops when receiving remote updates
 var _asPendingShiftSync = null; // local bvg_shifts JSON that failed to reach Firebase
@@ -1319,6 +1321,12 @@ var SYNC_KEYS = [
     firebase.initializeApp(firebaseConfig);
     _firebaseDB = firebase.database();
     _firebaseReady = true;
+    if (typeof firebase.storage === 'function') {
+      _firebaseStorage = firebase.storage();
+      console.log('BVG: Firebase Storage listo ✓');
+    } else {
+      console.warn('BVG: firebase-storage-compat.js no cargó — las capturas no se pueden subir');
+    }
     console.log('BVG: Firebase conectado ✓');
 
     // Show sync indicator
@@ -2014,9 +2022,10 @@ var AS_DAY_CHIPS = ['Cliente', 'WhatsApp', 'Limpieza coord', 'Recados', 'Visita 
 var AS_FOTO_MAX = 6;
 var AS_FOTO_MAX_EDGE = 1280;
 var AS_FOTO_QUALITY = 0.7;
-var AS_FOTO_MAX_DATAURL = 210 * 1024; // ~180–220KB data-URL budget so bvg_shifts still writes
+var AS_FOTO_MAX_DATAURL = 210 * 1024; // JPEG encode budget (~210KB) before Storage upload
 var AS_FOTO_MIN_EDGE = 480;
 var AS_FOTO_MIN_QUALITY = 0.42;
+var _asFotoBusy = 0;
 var AS_ADMIN_TAB = 'resumen';
 var AS_SESSION_KEY = 'bvg_activa_session';
 var AS_SHIFT_KEY = 'bvg_activa_shift';
@@ -2245,6 +2254,12 @@ function asShiftFotos(s) {
   if (s.dayReport && Array.isArray(s.dayReport.photos)) return s.dayReport.photos.slice();
   return [];
 }
+function asFotoSrc(foto) {
+  if (!foto) return '';
+  if (typeof foto === 'string') return foto;
+  if (foto.url) return String(foto.url);
+  return '';
+}
 function asShiftsOnDay(shifts, dateStr) {
   return (shifts || []).filter(function(s) {
     return s && s.startedAt && asLocalDateStr(s.startedAt) === dateStr;
@@ -2280,8 +2295,10 @@ function asCountPeriodStats(pin, from, to) {
 }
 function asFotosHtml(fotos, canDelete) {
   if (!fotos || !fotos.length) return '';
-  return '<div class="as-thumbs">' + fotos.map(function(src, i) {
-    return '<div class="as-thumb-wrap"><img src="' + src + '" class="as-thumb" alt="">' +
+  return '<div class="as-thumbs">' + fotos.map(function(foto, i) {
+    var src = asFotoSrc(foto);
+    if (!src) return '';
+    return '<div class="as-thumb-wrap"><img src="' + esc(src) + '" class="as-thumb" alt="">' +
       (canDelete ? '<button type="button" onclick="asRemoveDayPhoto(' + i + ')" aria-label="Quitar foto">×</button>' : '') +
       '</div>';
   }).join('') + '</div>';
@@ -2572,6 +2589,10 @@ function asConfirmEndShift() {
 }
 
 function asEndShift() {
+  if (_asFotoBusy > 0) {
+    showToast('Espera, se está subiendo la captura…', 'info', 2500);
+    return;
+  }
   var s = asActiveShift();
   if (!s) { closeModal('asEndModal'); return; }
   var endNote = document.getElementById('asEndNote');
@@ -3365,13 +3386,72 @@ function asNextFotoEncodeStep(edge, quality) {
 }
 function asFotoFailToast(err) {
   var msg = err && err.message ? String(err.message) : '';
+  var code = err && err.code ? String(err.code) : '';
   if (msg === 'decode') {
     showToast('No se pudo leer la foto. Si es HEIC, toma otra o elige una captura/JPEG.', 'error', 5000);
   } else if (msg === 'read') {
     showToast('No se pudo abrir el archivo. Elige otra foto de la galería.', 'error', 4500);
+  } else if (code.indexOf('storage') === 0 || msg === 'storage-off' || code.indexOf('unauthorized') >= 0) {
+    asStorageFailToast(err);
   } else {
     showToast('No se pudo leer la foto. Prueba otra captura más liviana.', 'error', 4500);
   }
+}
+function asStorageReady() {
+  return !!(typeof firebase !== 'undefined' && firebase.storage && _firebaseStorage);
+}
+function asStorageFailToast(err) {
+  var code = err && err.code ? String(err.code) : '';
+  var msg = err && err.message ? String(err.message) : '';
+  if (code === 'storage-off' || msg === 'storage-off') {
+    showToast('No se pudo subir la captura. Storage no está listo. Recarga e inténtalo, o avisa a Koke.', 'error', 5500);
+    return;
+  }
+  if (code.indexOf('storage/unauthorized') >= 0 || msg.indexOf('unauthorized') >= 0) {
+    showToast('No se pudo subir la captura. Koke debe publicar las reglas de Storage (storage.rules) una vez.', 'error', 6000);
+    return;
+  }
+  if (code.indexOf('storage/retry-limit-exceeded') >= 0 || code.indexOf('network') >= 0 || msg.indexOf('network') >= 0) {
+    showToast('No se pudo subir la captura. Revisa tu conexión e inténtalo de nuevo.', 'error', 5500);
+    return;
+  }
+  if (code.indexOf('storage/canceled') >= 0) {
+    showToast('Se canceló la subida de la captura.', 'info', 3000);
+    return;
+  }
+  showToast('No se pudo subir la captura a Storage. Inténtalo de nuevo.', 'error', 5500);
+}
+function asDataUrlToBlob(dataUrl) {
+  var parts = String(dataUrl || '').split(',');
+  if (parts.length < 2) throw new Error('empty');
+  var mimeMatch = parts[0].match(/data:([^;]+)/);
+  var mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  var bin;
+  try { bin = atob(parts[1]); } catch (e) { throw new Error('empty'); }
+  var arr = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime || 'image/jpeg' });
+}
+function asUploadJpegToStorage(path, dataUrl) {
+  if (!asStorageReady()) return Promise.reject(new Error('storage-off'));
+  var blob;
+  try { blob = asDataUrlToBlob(dataUrl); } catch (e) { return Promise.reject(e); }
+  var ref = _firebaseStorage.ref(path);
+  return ref.put(blob, { contentType: 'image/jpeg' }).then(function() {
+    return ref.getDownloadURL();
+  }).then(function(url) {
+    return { url: url, path: path, ts: Date.now() };
+  });
+}
+function asUploadShiftFoto(shiftId, dataUrl) {
+  var photoId = asUid();
+  var path = 'bvg/asistencia/' + shiftId + '/' + photoId + '.jpg';
+  return asUploadJpegToStorage(path, dataUrl);
+}
+function asUploadPeticionFoto(peticionId, dataUrl) {
+  var photoId = asUid();
+  var path = 'bvg/peticiones/' + peticionId + '/' + photoId + '.jpg';
+  return asUploadJpegToStorage(path, dataUrl);
 }
 function asRevokeBlobUrl(url) {
   try { if (url && String(url).indexOf('blob:') === 0) URL.revokeObjectURL(url); } catch (e) {}
@@ -3509,7 +3589,8 @@ function asHandleDayPhoto(input) {
   var files = input.files ? Array.prototype.slice.call(input.files) : [];
   input.value = '';
   if (!files.length) return;
-  if (!asActiveShift()) { showToast('Primero entra al turno', 'info'); return; }
+  var shift = asActiveShift();
+  if (!shift) { showToast('Primero entra al turno', 'info'); return; }
   function next(idx) {
     if (idx >= files.length) return;
     if (_asDayPhotos.length >= AS_FOTO_MAX) { showToast('Máximo ' + AS_FOTO_MAX + ' fotos', 'info'); return; }
@@ -3519,18 +3600,25 @@ function asHandleDayPhoto(input) {
       next(idx + 1);
       return;
     }
-    asCompressImage(f, AS_FOTO_MAX_EDGE, AS_FOTO_QUALITY).then(function(url) {
+    _asFotoBusy++;
+    asCompressImage(f, AS_FOTO_MAX_EDGE, AS_FOTO_QUALITY).then(function(dataUrl) {
       if (_asDayPhotos.length >= AS_FOTO_MAX) return;
-      _asDayPhotos.push(url);
-      asRenderDayThumbs();
-      if (asPersistFotos() === false) {
-        _asDayPhotos.pop();
+      showToast('Subiendo captura…', 'info', 2000);
+      return asUploadShiftFoto(shift.id, dataUrl).then(function(meta) {
+        if (_asDayPhotos.length >= AS_FOTO_MAX) return;
+        _asDayPhotos.push(meta);
         asRenderDayThumbs();
-        return;
-      }
-      showToast('Foto guardada', 'success', 1500);
+        if (asPersistFotos() === false) {
+          _asDayPhotos.pop();
+          asRenderDayThumbs();
+          return;
+        }
+        showToast('Foto guardada', 'success', 1500);
+      });
+    }).catch(function(err) { asFotoFailToast(err); }).then(function() {
+      _asFotoBusy = Math.max(0, _asFotoBusy - 1);
       next(idx + 1);
-    }).catch(function(err) { asFotoFailToast(err); next(idx + 1); });
+    });
   }
   next(0);
 }
@@ -3619,6 +3707,14 @@ function asHandlePetPhoto(input) {
     img.src = url; img.style.display = '';
   }).catch(function(err) { asFotoFailToast(err); });
 }
+function asFinishPeticionSave(rec) {
+  saveAsistenciaPeticiones(asUpsertById(getAsistenciaPeticiones(), rec));
+  closeModal('asPeticionModal');
+  asShowWorkerPanel('peticiones');
+  asRenderMyPets();
+  asUpdateWorkerBadges();
+  showToast('Enviado a Koke', 'success');
+}
 function asSavePeticion() {
   var u = asCurrentUser();
   if (!u) return;
@@ -3627,15 +3723,26 @@ function asSavePeticion() {
   if (!subject || !detail) { showToast('Asunto y detalle son obligatorios', 'error'); return; }
   var rec = {
     id: asUid(), type: document.getElementById('asPetType').value, subject: subject, detail: detail,
-    urgency: document.getElementById('asPetUrg').value, photo: document.getElementById('asPetFotoData').value || null,
+    urgency: document.getElementById('asPetUrg').value, photo: null,
     status: 'pending', userPin: u.pin, userShort: u.short, createdAt: Date.now()
   };
-  saveAsistenciaPeticiones(asUpsertById(getAsistenciaPeticiones(), rec));
-  closeModal('asPeticionModal');
-  asShowWorkerPanel('peticiones');
-  asRenderMyPets();
-  asUpdateWorkerBadges();
-  showToast('Enviado a Koke', 'success');
+  var rawPhoto = document.getElementById('asPetFotoData').value || '';
+  if (!rawPhoto) {
+    asFinishPeticionSave(rec);
+    return;
+  }
+  if (rawPhoto.indexOf('data:image') !== 0) {
+    rec.photo = rawPhoto;
+    asFinishPeticionSave(rec);
+    return;
+  }
+  showToast('Subiendo captura…', 'info', 2000);
+  asUploadPeticionFoto(rec.id, rawPhoto).then(function(meta) {
+    rec.photo = meta;
+    asFinishPeticionSave(rec);
+  }).catch(function(err) {
+    asStorageFailToast(err);
+  });
 }
 function asRenderMyPets() {
   var box = document.getElementById('asMyPets');
@@ -3875,7 +3982,7 @@ function asRenderAdminPets(list) {
     return '<div class="as-item"><div class="as-item-top"><b>' + esc(p.userShort || 'Valeria') + ' · ' + esc(p.type === 'duda' ? 'Duda' : 'Material') + ' · ' + esc(p.subject) + '</b><span class="badge ' + (p.status === 'done' ? 'badge-green' : p.status === 'seen' ? 'badge-blue' : 'badge-orange') + '">' + esc(p.status) + '</span></div>' +
       '<small>' + esc(p.detail) + (p.urgency ? ' · ' + esc(p.urgency) : '') + '</small>' +
       '<small>' + asFmtDateTime(p.createdAt) + '</small>' +
-      (p.photo ? '<img src="' + p.photo + '" class="as-thumb" alt="">' : '') + acts + '</div>';
+      (asFotoSrc(p.photo) ? '<img src="' + esc(asFotoSrc(p.photo)) + '" class="as-thumb" alt="">' : '') + acts + '</div>';
   }).join('');
 }
 function asSetPeticion(id, status) {

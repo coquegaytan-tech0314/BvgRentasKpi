@@ -75,9 +75,19 @@ if (asLocalDateStr(q1.from.getTime()).slice(8) !== '01') throw new Error('qkey d
 if (asShiftNoteText({ queHice: 'Limpieza 1401', note: 'old' }) !== 'Limpieza 1401') throw new Error('note prefers queHice');
 if (asShiftNoteText({ note: 'WhatsApp' }) !== 'WhatsApp') throw new Error('note fallback');
 if (asShiftNoteText({ dayReport: { text: 'chips text' } }) !== 'chips text') throw new Error('note from dayReport');
+function asFotoSrc(foto) {
+  if (!foto) return '';
+  if (typeof foto === 'string') return foto;
+  if (foto.url) return String(foto.url);
+  return '';
+}
 if (asShiftFotos({ fotos: ['a', 'b'] }).length !== 2) throw new Error('fotos');
 if (asShiftFotos({ dayReport: { photos: ['x'] } })[0] !== 'x') throw new Error('fotos fallback');
 if (asShiftFotos({ fotos: [] , dayReport: { photos: ['x'] } })[0] !== 'x') throw new Error('empty fotos falls back');
+if (asFotoSrc('data:image/jpeg;base64,xxxx') !== 'data:image/jpeg;base64,xxxx') throw new Error('legacy data URL still reads');
+if (asFotoSrc({ url: 'https://example.com/a.jpg', path: 'bvg/asistencia/s1/p1.jpg', ts: 1 }) !== 'https://example.com/a.jpg') throw new Error('storage meta uses url');
+if (asFotoSrc({ path: 'bvg/asistencia/s1/p1.jpg' }) !== '') throw new Error('path-only meta has no display src');
+if (JSON.stringify({ url: 'https://x/a.jpg', path: 'bvg/asistencia/s/p.jpg', ts: 1 }).length > 2048) throw new Error('storage meta must stay tiny vs data URL');
 
 if (asDayPunchStatus([]) !== 'falta') throw new Error('empty day is falta');
 if (asDayPunchStatus([{ endedAt: 1 }]) !== 'worked') throw new Error('closed is worked');
@@ -313,6 +323,42 @@ if (html.indexOf('function asIsLikelyImageFile') === -1) throw new Error('asIsLi
 if (html.indexOf('_asPendingShiftSync') === -1) throw new Error('failed Firebase shift write must not silently wipe local thumbs');
 if (!/function asHandleDayPhoto[\s\S]*asIsLikelyImageFile[\s\S]*asFotoFailToast/.test(html)) throw new Error('day photo path must accept HEIC/empty type and toast on fail');
 if (!/function saveData[\s\S]*asShiftSaveFailToast/.test(html)) throw new Error('saveData must toast shift write failures');
+
+if (html.indexOf('firebase-storage-compat.js') === -1) throw new Error('must load firebase-storage-compat.js');
+if (!html.includes('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js')) throw new Error('storage SDK must stay on 10.12.0');
+if (html.indexOf('_firebaseStorage') === -1) throw new Error('Storage must be initialized');
+if (html.indexOf('function asFotoSrc') === -1) throw new Error('asFotoSrc missing');
+if (html.indexOf('function asUploadShiftFoto') === -1) throw new Error('asUploadShiftFoto missing');
+if (html.indexOf('function asUploadPeticionFoto') === -1) throw new Error('asUploadPeticionFoto missing');
+if (html.indexOf('function asStorageFailToast') === -1) throw new Error('asStorageFailToast missing');
+if (html.indexOf('bvg/asistencia/') === -1) throw new Error('shift capturas must upload under bvg/asistencia/');
+if (html.indexOf('bvg/peticiones/') === -1) throw new Error('peticion capturas must upload under bvg/peticiones/');
+if (html.indexOf('Koke debe publicar las reglas de Storage') === -1) throw new Error('unauthorized Storage toast must tell Koke to deploy rules');
+if (html.indexOf('No se pudo subir la captura a Storage') === -1) throw new Error('generic Storage failure toast missing');
+if (html.indexOf('function asCanSeeRevenue') === -1) throw new Error('PIN 2604 must still be gated from ingresos');
+
+var dayPhotoFn = html.match(/function asHandleDayPhoto\([\s\S]*?\nfunction asSaveDayReport/);
+if (!dayPhotoFn) throw new Error('asHandleDayPhoto block missing');
+if (dayPhotoFn[0].indexOf('asUploadShiftFoto') === -1) throw new Error('day photo path must upload to Storage');
+if (/_asDayPhotos\.push\(url\)/.test(dayPhotoFn[0])) throw new Error('day photos must not store data URLs after compress');
+if (dayPhotoFn[0].indexOf('_asDayPhotos.push(meta)') === -1) throw new Error('day photos must store Storage meta');
+
+var petSaveFn = html.match(/function asSavePeticion\([\s\S]*?\nfunction asRenderMyPets/);
+if (!petSaveFn) throw new Error('asSavePeticion block missing');
+if (petSaveFn[0].indexOf('asUploadPeticionFoto') === -1) throw new Error('peticion save must upload foto to Storage');
+if (/photo: document\.getElementById\('asPetFotoData'\)\.value/.test(petSaveFn[0])) throw new Error('peticion must not write the data URL into RTDB');
+
+if (!/function asFotosHtml[\s\S]*asFotoSrc/.test(html)) throw new Error('thumbs must read Storage URL or legacy data URL via asFotoSrc');
+if (!/function asRenderAdminPets[\s\S]*asFotoSrc\(p\.photo\)/.test(html)) throw new Error('admin peticion thumbs must use asFotoSrc');
+
+var rules = fs.readFileSync(__dirname + '/storage.rules', 'utf8');
+var fbjson = JSON.parse(fs.readFileSync(__dirname + '/firebase.json', 'utf8'));
+if (!fbjson.storage || fbjson.storage.rules !== 'storage.rules') throw new Error('firebase.json must point storage.rules');
+if (rules.indexOf('match /bvg/asistencia/') === -1) throw new Error('storage.rules must allow bvg/asistencia');
+if (rules.indexOf('match /bvg/peticiones/') === -1) throw new Error('storage.rules must allow bvg/peticiones');
+if (/match \/\{\s*allPaths\s*=\s*\*\*\s*\}[\s\S]*allow (read|write):\s*if\s*true/.test(rules)) throw new Error('storage.rules must not open the whole bucket');
+if (rules.indexOf('firebase deploy --only storage') === -1) throw new Error('storage.rules must document one-time deploy');
+if (!fs.existsSync(__dirname + '/.firebaserc')) throw new Error('.firebaserc missing for CLI deploy');
 
 var occChunk = html.match(/\/\* OCCUPANCY KPI[\s\S]*?\/\* END OCCUPANCY KPI \*\//);
 if (!occChunk) throw new Error('occupancy helpers missing from dashboard');

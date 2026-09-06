@@ -1,0 +1,34 @@
+rules_version = '2';
+// BVG / ALORA Asistencia — Firebase Storage rules
+//
+// Deploy ONCE (the app cannot publish rules by itself):
+//   npm i -g firebase-tools
+//   firebase login
+//   firebase use rentasbvg-50a41
+//   firebase deploy --only storage
+//
+// Or paste this file in Firebase Console → Storage → Rules → Publish.
+//
+// The dashboard has no Firebase Auth (PIN-only, same as current RTDB).
+// These rules allow public read/write ONLY under the captura folders.
+// Do NOT open the whole bucket. Do NOT change RTDB rules for this.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function asCapturaWriteOk() {
+      return request.resource == null
+        || (request.resource.size < 300 * 1024
+            && request.resource.contentType.matches('image/.*'));
+    }
+
+    match /bvg/asistencia/{shiftId}/{fileName} {
+      allow read: if true;
+      allow write: if asCapturaWriteOk();
+    }
+
+    match /bvg/peticiones/{peticionId}/{fileName} {
+      allow read: if true;
+      allow write: if asCapturaWriteOk();
+    }
+  }
+}
