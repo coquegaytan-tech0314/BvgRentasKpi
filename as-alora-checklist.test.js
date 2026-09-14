@@ -163,6 +163,7 @@ if (stripped.total != null || stripped.anticipo != null || stripped.lim != null)
 
 var fs = require('fs');
 var html = fs.readFileSync(__dirname + '/BVG-Dashboard.html', 'utf8');
+var css = fs.readFileSync(__dirname + '/styles.css', 'utf8');
 var loginChunk = html.split('id="loginScreen"')[1].split('id="app"')[0];
 if (!loginChunk.includes('assets/alora-login-mark.png')) throw new Error('welcome card must use locked login mark');
 if (loginChunk.includes('alora-window.png') || loginChunk.includes('alora-window-lluvias')) throw new Error('welcome card must not use header or seasonal window');
@@ -350,6 +351,30 @@ if (/photo: document\.getElementById\('asPetFotoData'\)\.value/.test(petSaveFn[0
 
 if (!/function asFotosHtml[\s\S]*asFotoSrc/.test(html)) throw new Error('thumbs must read Storage URL or legacy data URL via asFotoSrc');
 if (!/function asRenderAdminPets[\s\S]*asFotoSrc\(p\.photo\)/.test(html)) throw new Error('admin peticion thumbs must use asFotoSrc');
+if (html.indexOf('id="asFotoLightbox"') === -1) throw new Error('asistencia foto lightbox markup missing');
+if (html.indexOf('function asOpenFotoLightbox') === -1) throw new Error('asOpenFotoLightbox missing');
+if (html.indexOf('function asCloseFotoLightbox') === -1) throw new Error('asCloseFotoLightbox missing');
+if (html.indexOf('function asOpenFotoFromEl') === -1) throw new Error('asOpenFotoFromEl missing');
+var fotosHtmlFn = html.match(/function asFotosHtml\([\s\S]*?\nfunction asOpenFotoFromEl/);
+if (!fotosHtmlFn) throw new Error('asFotosHtml block missing');
+if (fotosHtmlFn[0].indexOf('asOpenFotoFromEl(this,event)') === -1) throw new Error('asFotosHtml thumbs must open lightbox');
+if (fotosHtmlFn[0].indexOf('stopPropagation') === -1) throw new Error('thumb delete × must stopPropagation so lightbox does not open');
+if (html.indexOf('asOpenFotoFromEl(this,event)') === -1) throw new Error('thumb wrap must be clickable for lightbox');
+if (!/function asOpenFotoFromEl[\s\S]*stopPropagation/.test(html)) throw new Error('thumb click must stopPropagation so parent shift/calendar handlers do not fire');
+if (!/document\.addEventListener\('keydown'[\s\S]*Escape[\s\S]*asCloseFotoLightbox/.test(html)) throw new Error('Escape must close foto lightbox');
+if (css.indexOf('.as-foto-lb') === -1) throw new Error('lightbox styles missing from styles.css');
+(function() {
+  function esc(s) { return String(s == null ? '' : s); }
+  eval(html.slice(html.indexOf('function asFotosHtml'), html.indexOf('function asOpenFotoFromEl')));
+  var view = asFotosHtml(['data:image/jpeg;base64,xxxx'], false);
+  if (view.indexOf('asOpenFotoFromEl(this,event)') === -1) throw new Error('view thumbs must be clickable');
+  if (view.indexOf('data:image/jpeg;base64,xxxx') === -1) throw new Error('legacy data URL must render in thumb');
+  if (view.indexOf('asRemoveDayPhoto') !== -1) throw new Error('view mode must not show delete');
+  var stor = asFotosHtml([{ url: 'https://firebasestorage.googleapis.com/a.jpg?token=1', path: 'bvg/asistencia/s1/p1.jpg', ts: 1 }], false);
+  if (stor.indexOf('https://firebasestorage.googleapis.com/a.jpg?token=1') === -1) throw new Error('Storage url must render in thumb');
+  var del = asFotosHtml(['data:image/jpeg;base64,xxxx'], true);
+  if (del.indexOf('event.stopPropagation();asRemoveDayPhoto(0)') === -1) throw new Error('delete × must stopPropagation and still remove');
+})();
 
 var rules = fs.readFileSync(__dirname + '/storage.rules', 'utf8');
 var fbjson = JSON.parse(fs.readFileSync(__dirname + '/firebase.json', 'utf8'));

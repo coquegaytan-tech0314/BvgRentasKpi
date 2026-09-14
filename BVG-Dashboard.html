@@ -1133,6 +1133,11 @@ function aloraApplyWindowSeason() {
   </div>
 </div>
 
+<div class="as-foto-lb" id="asFotoLightbox" onclick="asCloseFotoLightbox(event)" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Foto del día">
+  <button type="button" class="as-foto-lb-close" onclick="asCloseFotoLightbox(event)" aria-label="Cerrar">×</button>
+  <img id="asFotoLightboxImg" alt="Foto del turno" onclick="event.stopPropagation()">
+</div>
+
 <div class="modal-overlay" id="asAdminCloseModal">
   <div class="modal" style="max-width:420px">
     <div class="modal-header"><h3>Registrar salida</h3><button class="modal-close" onclick="closeModal('asAdminCloseModal')">×</button></div>
@@ -2298,11 +2303,51 @@ function asFotosHtml(fotos, canDelete) {
   return '<div class="as-thumbs">' + fotos.map(function(foto, i) {
     var src = asFotoSrc(foto);
     if (!src) return '';
-    return '<div class="as-thumb-wrap"><img src="' + esc(src) + '" class="as-thumb" alt="">' +
-      (canDelete ? '<button type="button" onclick="asRemoveDayPhoto(' + i + ')" aria-label="Quitar foto">×</button>' : '') +
+    return '<div class="as-thumb-wrap" onclick="asOpenFotoFromEl(this,event)">' +
+      '<img src="' + esc(src) + '" class="as-thumb" alt="">' +
+      (canDelete ? '<button type="button" onclick="event.stopPropagation();asRemoveDayPhoto(' + i + ')" aria-label="Quitar foto">×</button>' : '') +
       '</div>';
   }).join('') + '</div>';
 }
+function asOpenFotoFromEl(el, ev) {
+  if (ev) {
+    if (ev.stopPropagation) ev.stopPropagation();
+    if (ev.preventDefault) ev.preventDefault();
+  }
+  var img = el && (el.tagName === 'IMG' ? el : el.querySelector && el.querySelector('img.as-thumb'));
+  var src = img && img.getAttribute('src');
+  if (src) asOpenFotoLightbox(src);
+}
+function asOpenFotoLightbox(src) {
+  var box = document.getElementById('asFotoLightbox');
+  var img = document.getElementById('asFotoLightboxImg');
+  if (!box || !img || !src) return;
+  img.src = src;
+  box.classList.add('show');
+  box.setAttribute('aria-hidden', 'false');
+}
+function asCloseFotoLightbox(ev) {
+  if (ev) {
+    if (ev.target && ev.target.id === 'asFotoLightboxImg') return;
+    if (ev.stopPropagation) ev.stopPropagation();
+    if (ev.preventDefault) ev.preventDefault();
+  }
+  var box = document.getElementById('asFotoLightbox');
+  var img = document.getElementById('asFotoLightboxImg');
+  if (box) {
+    box.classList.remove('show');
+    box.setAttribute('aria-hidden', 'true');
+  }
+  if (img) img.removeAttribute('src');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape' && e.key !== 'Esc') return;
+  var box = document.getElementById('asFotoLightbox');
+  if (!box || !box.classList.contains('show')) return;
+  e.preventDefault();
+  if (e.stopPropagation) e.stopPropagation();
+  asCloseFotoLightbox(e);
+});
 function asReadActiveFallback() {
   try { return JSON.parse(localStorage.getItem(AS_SHIFT_KEY)); } catch (e) { return null; }
 }
