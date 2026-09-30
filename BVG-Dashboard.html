@@ -175,7 +175,7 @@ function aloraApplyWindowSeason() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
           Gastos
         </a>
-        <a href="#" data-section="recibos" class="income-only" onclick="showSection('recibos')">
+        <a href="#" data-section="recibos" onclick="showSection('recibos')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
           Recibos
         </a>
@@ -380,7 +380,7 @@ function aloraApplyWindowSeason() {
       <!-- ============================================================
            SECTION 4: RECIBOS (NEW)
            ============================================================ -->
-      <div class="section income-only" id="sec-recibos">
+      <div class="section" id="sec-recibos">
         <div class="page-header">
           <h2>Recibos</h2>
         </div>
@@ -403,7 +403,7 @@ function aloraApplyWindowSeason() {
               <div class="form-group"><label>No. Recibo</label><input type="number" id="rcNumero"></div>
               <div class="form-group"><label>Fecha Entrada</label><input type="date" id="rcFechaEntrada"></div>
               <div class="form-group"><label>Fecha Salida</label><input type="date" id="rcFechaSalida"></div>
-              <div class="form-group"><label>Total Reserva (MXN)</label><input type="number" id="rcTotalReserva" step="0.01"></div>
+              <div class="form-group income-only" id="rcTotalReservaWrap"><label>Total Reserva (MXN)</label><input type="number" id="rcTotalReserva" step="0.01"></div>
               <div class="form-group"><label>Cantidad Pagada (MXN) *</label><input type="number" id="rcCantidad" step="0.01"></div>
               <div class="form-group full"><label>Concepto</label>
                 <select id="rcConceptoTipo" onchange="updateConceptoPreview()">
@@ -443,8 +443,8 @@ function aloraApplyWindowSeason() {
           </div>
         </div>
 
-        <!-- Receipt History -->
-        <div style="margin-top:1.5rem">
+        <!-- Receipt History (admin only — colaboradora must not see past amounts) -->
+        <div id="rcHistoryBlock" class="income-only" style="margin-top:1.5rem">
           <h3 style="font-size:1rem;margin-bottom:.75rem">Historial de Recibos</h3>
           <div class="filters">
             <input type="text" class="search-input" id="rcSearch" placeholder="Buscar recibo..." oninput="renderReceiptHistory()">
@@ -923,7 +923,7 @@ function aloraApplyWindowSeason() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
       Rentas
     </a>
-    <a href="#" data-section="recibos" class="income-only" onclick="showSection('recibos')">
+    <a href="#" data-section="recibos" onclick="showSection('recibos')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
       Recibos
     </a>
@@ -2352,14 +2352,6 @@ function showSection(name) {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('show');
 
-  if (name === 'recibos' && !asCanSeeRevenue()) {
-    showToast('Recibos solo para Koke (0314)', 'error');
-    name = 'gastos';
-    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
-    document.getElementById('sec-gastos').classList.add('active');
-    document.querySelectorAll('.sidebar nav a, .bottom-nav a').forEach(function(a) { a.classList.remove('active'); });
-    document.querySelectorAll('[data-section="gastos"]').forEach(function(a) { a.classList.add('active'); });
-  }
   if (name === 'dashboard') renderDashboard();
   else if (name === 'tracking') renderTracking();
   else if (name === 'gastos') renderExpenses();
@@ -2590,12 +2582,20 @@ function applyRevenueRestrictions() {
   var hide = !asCanSeeRevenue();
   document.body.classList.toggle('hide-income', hide);
   document.documentElement.classList.toggle('hide-income', hide);
-  document.querySelectorAll('[data-section="recibos"]').forEach(function(el) {
-    el.style.display = hide ? 'none' : '';
-  });
+  if (hide) {
+    var hist = document.getElementById('recibosBody');
+    if (hist) hist.innerHTML = '';
+    var tot = document.getElementById('rcTotalReserva');
+    if (tot) tot.value = '';
+  }
 }
 function asRefreshAfterRoleChange() {
   applyRevenueRestrictions();
+  if (!asCanSeeRevenue()) {
+    var cant = document.getElementById('rcCantidad');
+    if (cant) cant.value = '';
+    try { populateReceiptBookingDropdown(); } catch (e) {}
+  }
   try { renderDashboard(); } catch (e) {}
   try {
     if (document.getElementById('sec-tracking') && document.getElementById('sec-tracking').classList.contains('active')) renderTracking();
@@ -2605,6 +2605,9 @@ function asRefreshAfterRoleChange() {
   } catch (e) {}
   try {
     if (document.getElementById('sec-gastos') && document.getElementById('sec-gastos').classList.contains('active')) renderExpenses();
+  } catch (e) {}
+  try {
+    if (document.getElementById('sec-recibos') && document.getElementById('sec-recibos').classList.contains('active')) renderRecibos();
   } catch (e) {}
   try { renderCRM(); } catch (e) {}
 }
@@ -5848,6 +5851,10 @@ function initReceiptForm() {
 
 function renderRecibos() {
   populateReceiptBookingDropdown();
+  if (!asCanSeeRevenue()) {
+    var tot = document.getElementById('rcTotalReserva');
+    if (tot) tot.value = '';
+  }
   renderReceiptHistory();
 }
 
@@ -5856,9 +5863,11 @@ function populateReceiptBookingDropdown() {
   const sel = document.getElementById('rcBookingSelect');
   sel.innerHTML = '<option value="">— Entrada manual —</option>';
   bookings.sort((a,b) => (b.entrada||'').localeCompare(a.entrada||''));
+  var seeRev = asCanSeeRevenue();
   bookings.forEach(b => {
-    const nights = daysBetween(b.entrada, b.salida);
-    sel.innerHTML += '<option value="' + b.id + '">' + esc(b.rent) + ' — ' + esc(b.depto) + ' (' + fmtDateShort(b.entrada) + ' → ' + fmtDateShort(b.salida) + ') ' + fmtMoney(b.total) + '</option>';
+    var label = esc(b.rent) + ' — ' + esc(b.depto) + ' (' + fmtDateShort(b.entrada) + ' → ' + fmtDateShort(b.salida) + ')';
+    if (seeRev) label += ' ' + fmtMoney(b.total);
+    sel.innerHTML += '<option value="' + b.id + '">' + label + '</option>';
   });
 }
 
@@ -5871,8 +5880,12 @@ function fillReceiptFromBooking() {
   document.getElementById('rcDepto').value = b.depto.includes('1404') ? '1404 Norte' : '1401 Sur';
   document.getElementById('rcFechaEntrada').value = b.entrada;
   document.getElementById('rcFechaSalida').value = b.salida;
-  document.getElementById('rcTotalReserva').value = b.total || '';
-  document.getElementById('rcCantidad').value = b.total || '';
+  if (asCanSeeRevenue()) {
+    document.getElementById('rcTotalReserva').value = b.total || '';
+    document.getElementById('rcCantidad').value = b.total || '';
+  } else {
+    document.getElementById('rcTotalReserva').value = '';
+  }
 }
 
 function updateConceptoPreview() {
@@ -5889,7 +5902,9 @@ function buildConceptoText() {
   const nights = daysBetween(entrada, salida);
   const totalReserva = parseFloat(document.getElementById('rcTotalReserva').value) || 0;
   const dateRange = fmtDateShort(entrada) + ' al ' + fmtDateShort(salida);
-  return tipo + ' ' + depto + ', ' + nights + ' noches ' + dateRange + '. TOTAL: ' + fmtMoney(totalReserva);
+  var text = tipo + ' ' + depto + ', ' + nights + ' noches ' + dateRange;
+  if (!asCanSeeRevenue()) return text;
+  return text + '. TOTAL: ' + fmtMoney(totalReserva);
 }
 
 function buildReceiptHTML() {
@@ -6072,6 +6087,11 @@ function saveReceiptToHistory() {
     fechaSalida: document.getElementById('rcFechaSalida').value,
     totalReserva: parseFloat(document.getElementById('rcTotalReserva').value) || 0
   };
+  if (!asCanSeeRevenue()) {
+    receipt.totalReserva = 0;
+    var who = asCurrentUser();
+    receipt.createdBy = (who && (who.short || who.name)) || 'colaboradora';
+  }
 
   const receipts = getReceipts();
   receipts.push(receipt);
@@ -6086,6 +6106,11 @@ function saveReceiptToHistory() {
 }
 
 function renderReceiptHistory() {
+  if (!asCanSeeRevenue()) {
+    var emptyBody = document.getElementById('recibosBody');
+    if (emptyBody) emptyBody.innerHTML = '';
+    return;
+  }
   const search = (document.getElementById('rcSearch')?.value || '').toLowerCase();
   let receipts = getReceipts();
   if (search) {
@@ -6101,7 +6126,7 @@ function renderReceiptHistory() {
     '<tr>' +
       '<td><strong>' + r.numero + '</strong></td>' +
       '<td>' + fmtDate(r.fecha) + '</td>' +
-      '<td>' + esc(r.cliente) + '</td>' +
+      '<td>' + esc(r.cliente) + (r.createdBy ? ' <span style="color:var(--text-muted);font-size:.72rem">· ' + esc(String(r.createdBy)) + '</span>' : '') + '</td>' +
       '<td style="white-space:normal;max-width:200px">' + esc(r.concepto).substring(0,60) + (r.concepto.length > 60 ? '...' : '') + '</td>' +
       '<td style="font-weight:600">' + fmtMoney(r.cantidad) + '</td>' +
       '<td>' + esc(r.formaPago) + '</td>' +
@@ -6114,6 +6139,10 @@ function renderReceiptHistory() {
 }
 
 function redownloadReceipt(id) {
+  if (!asCanSeeRevenue()) {
+    showToast('El historial de recibos es solo para Koke (0314)', 'error');
+    return;
+  }
   const r = getReceipts().find(x => x.id === id);
   if (!r) return;
   // Fill form with receipt data and generate PDF
@@ -6127,7 +6156,12 @@ function redownloadReceipt(id) {
   document.getElementById('rcTotalReserva').value = r.totalReserva || '';
   const radio = document.querySelector('input[name="rcFormaPago"][value="' + (r.formaPago || 'Transferencia') + '"]');
   if (radio) radio.checked = true;
-  if (r.concepto && !r.concepto.includes('de renta')) {
+  if (r.createdBy) {
+    document.getElementById('rcConceptoTipo').value = 'Otro';
+    document.getElementById('rcConceptoCustomWrap').style.display = '';
+    document.getElementById('rcConceptoCustom').value = r.concepto || '';
+    document.getElementById('rcTotalReserva').value = '';
+  } else if (r.concepto && !r.concepto.includes('de renta')) {
     document.getElementById('rcConceptoTipo').value = 'Otro';
     document.getElementById('rcConceptoCustomWrap').style.display = '';
     document.getElementById('rcConceptoCustom').value = r.concepto;
@@ -6136,6 +6170,10 @@ function redownloadReceipt(id) {
 }
 
 function deleteReceipt(id) {
+  if (!asCanSeeRevenue()) {
+    showToast('El historial de recibos es solo para Koke (0314)', 'error');
+    return;
+  }
   if (!confirm('¿Eliminar este recibo?')) return;
   saveReceipts(getReceipts().filter(r => r.id !== id));
   renderReceiptHistory();
