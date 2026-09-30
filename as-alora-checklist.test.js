@@ -447,4 +447,28 @@ if (stats.ytd.sur + stats.ytd.norte !== stats.ytd.total) throw new Error('ytd pa
 if (stats.ytd.total > stats.full.total) throw new Error('YTD cannot exceed full year unique nights');
 if (stats.norteAvail + stats.surAvail !== 730 - stats.full.total) throw new Error('available nights pair with unique occupied');
 
+var showFn = html.match(/function showSection\(name\) \{[\s\S]*?\nfunction toggleSidebar/);
+if (!showFn) throw new Error('showSection missing');
+if (showFn[0].indexOf('Recibos solo para Koke') !== -1) throw new Error('colaboradora must be able to open Recibos');
+if (css.indexOf('[data-section="recibos"]') !== -1) throw new Error('Recibos nav must stay visible when income is hidden');
+if (/class="section income-only" id="sec-recibos"/.test(html)) throw new Error('Recibos section must not be income-only');
+if (html.indexOf('id="rcHistoryBlock" class="income-only"') === -1) throw new Error('receipt history must stay hidden from colaboradora');
+if (html.indexOf('id="rcTotalReservaWrap"') === -1 || html.indexOf('income-only" id="rcTotalReservaWrap"') === -1) throw new Error('booking total field must stay income-only');
+if (/data-section="recibos" class="income-only"/.test(html)) throw new Error('Recibos links must not use income-only');
+var popFn = html.match(/function populateReceiptBookingDropdown\(\) \{[\s\S]*?\nfunction fillReceiptFromBooking/);
+if (!popFn || popFn[0].indexOf('if (seeRev) label += \' \' + fmtMoney(b.total)') === -1) throw new Error('booking dropdown money is admin-only');
+var fillFn = html.match(/function fillReceiptFromBooking\(\) \{[\s\S]*?\nfunction updateConceptoPreview/);
+if (!fillFn || fillFn[0].indexOf('if (asCanSeeRevenue())') === -1) throw new Error('fillReceiptFromBooking must not copy booking total for colaboradora');
+if (fillFn[0].indexOf("document.getElementById('rcCantidad').value = b.total") === -1) throw new Error('admin still autofills cantidad from booking total');
+var conceptoFn = html.match(/function buildConceptoText\(\) \{[\s\S]*?\nfunction buildReceiptHTML/);
+if (!conceptoFn || conceptoFn[0].indexOf('if (!asCanSeeRevenue()) return text;') === -1) throw new Error('colaboradora concepto must not append booking TOTAL');
+if (conceptoFn[0].indexOf("'. TOTAL: ' + fmtMoney(totalReserva)") === -1) throw new Error('admin concepto still appends TOTAL');
+var saveFn = html.match(/function saveReceiptToHistory\(\) \{[\s\S]*?\nfunction renderReceiptHistory/);
+if (!saveFn || saveFn[0].indexOf('saveReceipts(receipts)') === -1 || saveFn[0].indexOf('setReceiptCounter(numero)') === -1) throw new Error('receipt save must keep folio sequence');
+if (saveFn[0].indexOf('receipt.createdBy') === -1) throw new Error('colaboradora receipt must be marked createdBy');
+if (saveFn[0].indexOf('receipt.totalReserva = 0') === -1) throw new Error('colaboradora receipt must not store booking total');
+var histFn = html.match(/function renderReceiptHistory\(\) \{[\s\S]*?\nfunction redownloadReceipt/);
+if (!histFn || histFn[0].indexOf('if (!asCanSeeRevenue())') === -1) throw new Error('colaboradora must not render receipt history');
+if (html.indexOf("showToast('El historial de recibos es solo para Koke (0314)'") === -1) throw new Error('delete/redownload must stay admin-only');
+
 console.log('as-alora-checklist.test.js ok');
