@@ -58,6 +58,7 @@ function aloraApplyWindowSeason() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- Firebase SDK (compat for no-build-tool usage) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <link rel="stylesheet" href="styles.css">
@@ -121,9 +122,10 @@ function aloraApplyWindowSeason() {
       <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-lg">
     </div>
     <p class="alora-sub">BVG Residencial · Ixtapa Zihuatanejo</p>
-    <div class="error" id="loginError">Contraseña incorrecta</div>
-    <input type="password" id="loginPassword" placeholder="Contraseña" autofocus>
-    <button onclick="attemptLogin()">Ingresar</button>
+    <div class="error" id="loginError">Esta cuenta de Google no tiene acceso.</div>
+    <p class="login-hint">Koke y Valeria entran con su cuenta de Google. La sesión queda en este teléfono hasta Cerrar sesión.</p>
+    <button type="button" id="googleSignInBtn" onclick="signInWithGoogle()">Continuar con Google</button>
+    <p class="login-status" id="loginStatus">Comprobando sesión…</p>
   </div>
 </div>
 <script>
@@ -599,11 +601,9 @@ function aloraApplyWindowSeason() {
             <img src="assets/alora-window.png" alt="" class="alora-window-img alora-window-md" width="56" height="56">
             <img src="assets/alora-wordmark.png" alt="ALORA" class="alora-wordmark-img alora-wordmark-md">
           </div>
-          <h3>¿Quién eres?</h3>
-          <p class="as-muted">PIN de 4 dígitos. 2604 es Valerie · 0314 es Koke (admin). No hay usuario ni «SOY NUEVO».</p>
-          <input type="tel" id="asPinInput" class="as-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="····" autocomplete="one-time-code" aria-label="PIN de asistencia">
-          <button type="button" class="btn btn-primary as-pin-btn" onclick="asTryPin()">Entrar al checador</button>
-          <p class="as-muted as-center">Valeria (colaboradora) o Koke (admin). La sesión del PIN se queda en este teléfono hasta que toques Cerrar sesión. Los PINs se pueden cambiar en Configuración.</p>
+          <h3>Entra con Google</h3>
+          <p class="as-muted">Koke y Valeria ya no usan PIN para abrir el tablero. Si ves esta tarjeta, cierra sesión y vuelve a entrar con Google.</p>
+          <button type="button" class="btn btn-primary as-pin-btn" onclick="asTryPin()">Volver a entrar</button>
         </div>
 
         <div id="asDesktopWarn" class="as-desktop-warn" style="display:none">Este checador está pensado para celular. Puedes registrar el turno desde aquí, pero Valeria lo usa desde el teléfono. Sin GPS.</div>
@@ -797,7 +797,8 @@ function aloraApplyWindowSeason() {
         <div class="page-header"><h2>Configuración</h2></div>
 
         <div class="settings-card admin-only">
-          <h3>Cambiar Contraseña</h3>
+          <h3>Contraseña anterior</h3>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">El tablero ya no abre con esta contraseña ni con PIN. El acceso es la cuenta de Google. El valor sigue guardado y no inicia sesión.</p>
           <div class="form-grid">
             <div class="form-group"><label>Contraseña actual</label><input type="password" id="cfgOldPw"></div>
             <div class="form-group"><label>Nueva contraseña</label><input type="password" id="cfgNewPw"></div>
@@ -807,7 +808,7 @@ function aloraApplyWindowSeason() {
 
         <div class="settings-card admin-only">
           <h3>PINs de Asistencia / Turnos</h3>
-          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">Identidad del checador (4 dígitos). No reemplaza la contraseña del dashboard. Puedes cambiarlos cuando quieras.</p>
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">Estos PIN ya no abren el tablero. Siguen identificando turnos ya guardados (2604 Valeria, 0314 Koke). El acceso es Google.</p>
           <div id="cfgAsistPins"></div>
           <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap">
             <input type="text" id="cfgAsNewName" placeholder="Nombre" style="flex:1;min-width:140px">
@@ -1285,7 +1286,11 @@ const STORAGE_KEYS = {
    ============================================================ */
 var _firebaseDB = null;
 var _firebaseStorage = null;
+var _firebaseAuth = null;
 var _firebaseReady = false;
+var _bvgListenersStarted = false;
+var _bvgAuthEmail = '';
+var _bvgStickyAuthError = '';
 var _firebaseSyncPaused = false; // prevents loops when receiving remote updates
 var _asPendingShiftSync = null; // local bvg_shifts JSON that failed to reach Firebase
 var _firebaseHydrated = false; // true only after the first successful read of bvg/
@@ -1328,88 +1333,114 @@ var SYNC_KEYS = [
 
   try {
     firebase.initializeApp(firebaseConfig);
+    if (typeof firebase.auth !== 'function') {
+      console.warn('BVG: firebase-auth-compat.js no cargó — no se abre la base');
+      return;
+    }
+    _firebaseAuth = firebase.auth();
     _firebaseDB = firebase.database();
-    _firebaseReady = true;
+    // Listeners stay off until an allowlisted Google account is signed in.
+    // _firebaseReady flips true inside startFirebaseSync().
     if (typeof firebase.storage === 'function') {
       _firebaseStorage = firebase.storage();
       console.log('BVG: Firebase Storage listo ✓');
     } else {
       console.warn('BVG: firebase-storage-compat.js no cargó — las capturas no se pueden subir');
     }
-    console.log('BVG: Firebase conectado ✓');
-
-    // Show sync indicator
-    var syncEl = document.getElementById('syncStatus');
-    if (syncEl) {
-      syncEl.style.display = 'block';
-      document.getElementById('syncIcon').textContent = '☁';
-      document.getElementById('syncText').textContent = 'Sincronizado';
-      syncEl.style.color = 'var(--green)';
-      syncEl.style.borderColor = 'var(--green)';
-    }
-    // Monitor connection state
-    _firebaseDB.ref('.info/connected').on('value', function(snap) {
-      var se = document.getElementById('syncStatus');
-      if (!se) return;
-      if (snap.val() === true) {
-        document.getElementById('syncIcon').textContent = '☁';
-        document.getElementById('syncText').textContent = 'Sincronizado';
-        se.style.color = 'var(--green)';
-        se.style.borderColor = 'var(--green)';
-      } else {
-        document.getElementById('syncIcon').textContent = '⚠';
-        document.getElementById('syncText').textContent = 'Sin conexión';
-        se.style.color = 'var(--orange)';
-        se.style.borderColor = 'var(--orange)';
-      }
-    });
-
-    // Listen for real-time changes from other devices.
-    // These callbacks only copy cloud → local. They must not push local state up.
-    SYNC_KEYS.forEach(function(key) {
-      _firebaseDB.ref('bvg/' + key).on('value', function(snapshot) {
-        if (_firebaseSyncPaused) return;
-        var val = snapshot.val();
-        if (val !== null && val !== undefined) {
-          var incoming = typeof val === 'string' ? val : JSON.stringify(val);
-          if (_shouldIgnoreShorterSnapshot(key, incoming, _firebaseKnownRaw)) {
-            console.warn('BVG: se ignora una lectura más corta de ' + key + ' para no encoger la lista conocida');
-            return;
-          }
-          // A failed Firebase write can leave stale remote data. Don't let that
-          // wipe a local thumb Valerie just saved.
-          if (key === 'bvg_shifts' && _asPendingShiftSync && (Date.now() - _asPendingShiftSync.at) < 180000) {
-            if (incoming !== _asPendingShiftSync.raw && incoming.length < _asPendingShiftSync.raw.length) {
-              _rememberFirebaseValue(key, incoming);
-              _queueOrWriteFirebase(key, _asPendingShiftSync.raw, function() {
-                _asPendingShiftSync = null;
-              }, function(e) {
-                console.warn('BVG: Error al reintentar turno en Firebase:', e);
-              });
-              return;
-            }
-          }
-          _rememberFirebaseValue(key, incoming);
-          // Save to localStorage without triggering Firebase write-back
-          _firebaseSyncPaused = true;
-          localStorage.setItem(key, incoming);
-          _firebaseSyncPaused = false;
-          if (key === 'bvg_receipts' || key === 'bvg_receipt_counter') _refreshReceiptNumberInput();
-
-          // Refresh the current view so changes appear
-          _refreshCurrentView();
-        }
-      });
-    });
-
-    // Read cloud first. No startup path may write until this resolves.
-    _migrateLocalToFirebase();
-
+    console.log('BVG: Firebase listo. La base espera a Google.');
   } catch (e) {
     console.warn('BVG: Error al iniciar Firebase:', e);
+    _firebaseAuth = null;
     _firebaseReady = false;
   }
 })();
+
+function _bvgOnConnected(snap) {
+  var se = document.getElementById('syncStatus');
+  if (!se) return;
+  if (snap.val() === true) {
+    document.getElementById('syncIcon').textContent = '☁';
+    document.getElementById('syncText').textContent = 'Sincronizado';
+    se.style.color = 'var(--green)';
+    se.style.borderColor = 'var(--green)';
+  } else {
+    document.getElementById('syncIcon').textContent = '⚠';
+    document.getElementById('syncText').textContent = 'Sin conexión';
+    se.style.color = 'var(--orange)';
+    se.style.borderColor = 'var(--orange)';
+  }
+}
+function _bvgOnRemoteValue(key, snapshot) {
+  if (_firebaseSyncPaused) return;
+  var val = snapshot.val();
+  if (val !== null && val !== undefined) {
+    var incoming = typeof val === 'string' ? val : JSON.stringify(val);
+    if (_shouldIgnoreShorterSnapshot(key, incoming, _firebaseKnownRaw)) {
+      console.warn('BVG: se ignora una lectura más corta de ' + key + ' para no encoger la lista conocida');
+      return;
+    }
+    // A failed Firebase write can leave stale remote data. Don't let that
+    // wipe a local thumb Valerie just saved.
+    if (key === 'bvg_shifts' && _asPendingShiftSync && (Date.now() - _asPendingShiftSync.at) < 180000) {
+      if (incoming !== _asPendingShiftSync.raw && incoming.length < _asPendingShiftSync.raw.length) {
+        _rememberFirebaseValue(key, incoming);
+        _queueOrWriteFirebase(key, _asPendingShiftSync.raw, function() {
+          _asPendingShiftSync = null;
+        }, function(e) {
+          console.warn('BVG: Error al reintentar turno en Firebase:', e);
+        });
+        return;
+      }
+    }
+    _rememberFirebaseValue(key, incoming);
+    // Save to localStorage without triggering Firebase write-back
+    _firebaseSyncPaused = true;
+    localStorage.setItem(key, incoming);
+    _firebaseSyncPaused = false;
+    if (key === 'bvg_receipts' || key === 'bvg_receipt_counter') _refreshReceiptNumberInput();
+
+    // Refresh the current view so changes appear
+    _refreshCurrentView();
+  }
+}
+function startFirebaseSync() {
+  if (_bvgListenersStarted || !_firebaseDB) return;
+  _bvgListenersStarted = true;
+  _firebaseReady = true;
+  var syncEl = document.getElementById('syncStatus');
+  if (syncEl) {
+    syncEl.style.display = 'block';
+    document.getElementById('syncIcon').textContent = '☁';
+    document.getElementById('syncText').textContent = 'Sincronizado';
+    syncEl.style.color = 'var(--green)';
+    syncEl.style.borderColor = 'var(--green)';
+  }
+  _firebaseDB.ref('.info/connected').on('value', _bvgOnConnected);
+  // Listen for real-time changes from other devices.
+  // These callbacks only copy cloud → local. They must not push local state up.
+  SYNC_KEYS.forEach(function(key) {
+    _firebaseDB.ref('bvg/' + key).on('value', function(snapshot) {
+      _bvgOnRemoteValue(key, snapshot);
+    });
+  });
+  // Read cloud first. No startup path may write until this resolves.
+  _migrateLocalToFirebase();
+}
+function stopFirebaseSync() {
+  if (_firebaseDB && _bvgListenersStarted) {
+    try { _firebaseDB.ref('.info/connected').off('value', _bvgOnConnected); } catch (e) {}
+    SYNC_KEYS.forEach(function(key) {
+      try { _firebaseDB.ref('bvg/' + key).off(); } catch (e) {}
+    });
+  }
+  _bvgListenersStarted = false;
+  _firebaseReady = false;
+  _firebaseHydrated = false;
+  _firebaseHydrateRetries = 0;
+  _firebaseWriteQueue = [];
+  var syncEl = document.getElementById('syncStatus');
+  if (syncEl) syncEl.style.display = 'none';
+}
 
 /* FIREBASE_GUARD_START */
 var _GUARDED_LIST_KEYS = {
@@ -2271,8 +2302,29 @@ function initSampleData() {
 }
 
 /* ============================================================
-   LOGIN
+   LOGIN — Google allowlist
+   The old welcome gate accepted PIN 2604 (Valeria, worker, no revenue),
+   PIN 0314 (Koke, admin), or the team password (admin). That path is gone.
+   Google email picks the same role and the same pin identity so existing
+   shifts stay attached. Neither person types a PIN after Google.
    ============================================================ */
+/* BVG_AUTH_START */
+var BVG_GOOGLE_USERS = [
+  { email: 'coquegaytan@gmail.com', pin: '0314', name: 'Koke', role: 'admin', short: 'Koke' },
+  { email: 'martinezcalderonedithvaleria@gmail.com', pin: '2604', name: 'Valeria Martínez-Calderón', role: 'worker', short: 'Valeria' }
+];
+function bvgNormalizeEmail(email) {
+  return String(email == null ? '' : email).trim().toLowerCase();
+}
+function bvgUserForEmail(email) {
+  var key = bvgNormalizeEmail(email);
+  if (!key) return null;
+  for (var i = 0; i < BVG_GOOGLE_USERS.length; i++) {
+    if (BVG_GOOGLE_USERS[i].email === key) return BVG_GOOGLE_USERS[i];
+  }
+  return null;
+}
+/* BVG_AUTH_END */
 function asWelcomeLoginKind(value, teamPassword) {
   var v = String(value == null ? '' : value).trim();
   if (v === '2604') return 'worker';
@@ -2280,14 +2332,161 @@ function asWelcomeLoginKind(value, teamPassword) {
   if (teamPassword && v === String(teamPassword)) return 'admin';
   return 'reject';
 }
-function asWelcomeSessionForKind(kind) {
-  if (kind === 'worker') {
-    return { pin: '2604', name: 'Valeria Martínez-Calderón', role: 'worker', short: 'Valeria', sessionId: asUid(), loginAt: Date.now() };
+function bvgAuthErrorMessage(err) {
+  var code = err && err.code ? err.code : '';
+  if (code === 'auth/unauthorized-domain') {
+    return 'Este dominio aún no está autorizado en Firebase Auth. Falta coquegaytan-tech0314.github.io.';
   }
-  if (kind === 'admin') {
-    return { pin: '0314', name: 'Koke', role: 'admin', short: 'Koke', sessionId: asUid(), loginAt: Date.now() };
+  if (code === 'auth/operation-not-allowed') {
+    return 'Google todavía no está habilitado en Firebase Authentication.';
   }
-  return null;
+  if (code === 'auth/popup-blocked') return 'El navegador bloqueó la ventana de Google.';
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return '';
+  if (code === 'auth/network-request-failed') return 'Sin conexión. Intenta de nuevo.';
+  return 'No se pudo entrar con Google.';
+}
+function bvgShowLoggedOut() {
+  stopFirebaseSync();
+  _bvgAuthEmail = '';
+  try { asSetSession(null); } catch (e) {}
+  try { sessionStorage.removeItem('bvg_admin_active'); } catch (e) {}
+  try { sessionStorage.removeItem('bvg_asistencia_session'); } catch (e) {}
+  document.documentElement.classList.remove('hide-income');
+  document.body.classList.remove('hide-income');
+  _sessionActive = false;
+  try { clearInactivityTimers(); } catch (e) {}
+  var timeout = document.getElementById('timeoutOverlay');
+  if (timeout) timeout.style.display = 'none';
+  var app = document.getElementById('app');
+  if (app) app.style.display = 'none';
+  var login = document.getElementById('loginScreen');
+  if (login) login.style.display = '';
+  var btn = document.getElementById('googleSignInBtn');
+  if (btn) btn.disabled = false;
+  var status = document.getElementById('loginStatus');
+  if (status) status.textContent = _bvgStickyAuthError ? '' : 'Entra con Google para continuar.';
+  var err = document.getElementById('loginError');
+  if (err) {
+    if (_bvgStickyAuthError) {
+      err.textContent = _bvgStickyAuthError;
+      err.style.display = 'block';
+    } else {
+      err.style.display = 'none';
+    }
+  }
+  var sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.classList.remove('open');
+  var overlay = document.getElementById('overlay');
+  if (overlay) overlay.classList.remove('show');
+}
+function bvgRecordLogin(sess) {
+  function write() {
+    var acc = {
+      id: sess.sessionId, type: 'login', userPin: sess.pin, userName: sess.name, userShort: sess.short,
+      loginAt: sess.loginAt, logoutAt: null, device: asIsPhone() ? 'phone' : 'desktop',
+      ua: (navigator.userAgent || '').slice(0, 180)
+    };
+    saveAsistenciaAccesos(asUpsertById(getAsistenciaAccesos(), acc));
+  }
+  // Wait for the first cloud read so a fresh browser cannot replace bvg_accesos.
+  if (_firebaseHydrated || !_firebaseReady) { write(); return; }
+  var tries = 0;
+  (function wait() {
+    if (_firebaseHydrated || tries > 20) { write(); return; }
+    tries++;
+    setTimeout(wait, 300);
+  })();
+}
+function bvgMarkAccesoLogout() {
+  var u = null;
+  try { u = asCurrentUser(); } catch (e) { return; }
+  if (!u || !u.sessionId) return;
+  var list = getAsistenciaAccesos();
+  var i = list.findIndex(function(a) { return a && a.id === u.sessionId; });
+  if (i >= 0 && !list[i].logoutAt) {
+    list[i].logoutAt = Date.now();
+    list[i].type = 'logout';
+    saveAsistenciaAccesos(list);
+  }
+}
+function bvgEnterApp(user, mapped) {
+  _bvgAuthEmail = mapped.email;
+  var prev = null;
+  try { prev = asCurrentUser(); } catch (e) {}
+  var same = !!(prev && bvgNormalizeEmail(prev.email) === mapped.email && prev.sessionId);
+  var sess = asNormalizeRole({
+    pin: mapped.pin,
+    name: mapped.name,
+    role: mapped.role,
+    short: mapped.short,
+    email: mapped.email,
+    uid: user.uid,
+    sessionId: same ? prev.sessionId : asUid(),
+    loginAt: same ? (prev.loginAt || Date.now()) : Date.now()
+  });
+  asSetSession(sess);
+  startFirebaseSync();
+  if (!same) bvgRecordLogin(sess);
+  openAppAfterGate();
+}
+function bvgOnAuthState(user) {
+  if (!user) {
+    bvgShowLoggedOut();
+    return;
+  }
+  var mapped = bvgUserForEmail(user.email);
+  if (!mapped || user.emailVerified !== true) {
+    _bvgStickyAuthError = (user.emailVerified !== true)
+      ? 'Google no marcó este correo como verificado.'
+      : 'Esta cuenta no tiene acceso. Entra con el Google de Koke o de Valeria.';
+    if (_firebaseAuth && _firebaseAuth.currentUser) {
+      _firebaseAuth.signOut().catch(function() { bvgShowLoggedOut(); });
+    } else {
+      bvgShowLoggedOut();
+    }
+    return;
+  }
+  _bvgStickyAuthError = '';
+  bvgEnterApp(user, mapped);
+}
+function signInWithGoogle() {
+  if (!_firebaseAuth || typeof firebase === 'undefined' || typeof firebase.auth !== 'function') {
+    _bvgStickyAuthError = 'Firebase Auth no está listo en este navegador.';
+    bvgShowLoggedOut();
+    return;
+  }
+  _bvgStickyAuthError = '';
+  var errEl = document.getElementById('loginError');
+  if (errEl) errEl.style.display = 'none';
+  var btn = document.getElementById('googleSignInBtn');
+  if (btn) btn.disabled = true;
+  var status = document.getElementById('loginStatus');
+  if (status) status.textContent = 'Abriendo Google…';
+  var provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  var useRedirect = false;
+  try { useRedirect = asIsPhone() || window.navigator.standalone === true; } catch (e) {}
+  function fail(err) {
+    if (btn) btn.disabled = false;
+    var msg = bvgAuthErrorMessage(err);
+    if (!msg) {
+      if (status) status.textContent = 'Entra con Google para continuar.';
+      return;
+    }
+    _bvgStickyAuthError = msg;
+    bvgShowLoggedOut();
+  }
+  if (useRedirect) {
+    _firebaseAuth.signInWithRedirect(provider).catch(fail);
+    return;
+  }
+  _firebaseAuth.signInWithPopup(provider).catch(function(err) {
+    if (err && err.code === 'auth/popup-blocked') {
+      _firebaseAuth.signInWithRedirect(provider).catch(fail);
+      return;
+    }
+    fail(err);
+  });
 }
 function openAppAfterGate() {
   applyRevenueRestrictions();
@@ -2302,19 +2501,6 @@ function openAppAfterGate() {
     try { asRefreshAfterRoleChange(); } catch (e) {}
   }
 }
-function attemptLogin() {
-  var input = document.getElementById('loginPassword');
-  var err = document.getElementById('loginError');
-  var v = (input && input.value ? input.value : '').trim();
-  var kind = asWelcomeLoginKind(v, getPassword());
-  if (kind === 'reject') {
-    if (err) err.style.display = 'block';
-    return;
-  }
-  asSetSession(asWelcomeSessionForKind(kind));
-  openAppAfterGate();
-}
-document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
 
 /* ============================================================
    APP INIT
@@ -2917,41 +3103,23 @@ function asPersistShift(s) {
 }
 
 function asTryPin() {
-  var input = document.getElementById('asPinInput');
-  var v = (input && input.value ? input.value : '').trim();
-  var u = getAsistenciaUsers().find(function(x) { return String(x.pin) === v; });
-  if (!u) { showToast('PIN incorrecto', 'error'); return; }
-  var sess = { pin: String(u.pin), name: u.name, role: u.role, short: u.short, sessionId: asUid(), loginAt: Date.now() };
-  asSetSession(sess);
-  var acc = {
-    id: sess.sessionId, type: 'login', userPin: sess.pin, userName: u.name, userShort: u.short,
-    loginAt: sess.loginAt, logoutAt: null, device: asIsPhone() ? 'phone' : 'desktop',
-    ua: (navigator.userAgent || '').slice(0, 180)
-  };
-  saveAsistenciaAccesos(asUpsertById(getAsistenciaAccesos(), acc));
-  if (input) input.value = '';
-  renderAsistencia();
-  asRefreshAfterRoleChange();
-  showToast('Hola, ' + u.short, 'success');
+  // PIN no longer chooses a role. A typed PIN must not turn Valeria into admin.
+  showToast('El checador usa tu cuenta de Google. No hace falta PIN.', 'info');
+  if (_firebaseAuth && _firebaseAuth.currentUser) {
+    var mapped = bvgUserForEmail(_firebaseAuth.currentUser.email);
+    if (mapped && _firebaseAuth.currentUser.emailVerified === true) {
+      bvgEnterApp(_firebaseAuth.currentUser, mapped);
+    }
+    return;
+  }
+  signInWithGoogle();
 }
 
 function asLogoutPin() {
-  var u = asCurrentUser();
-  if (u && u.sessionId) {
-    var list = getAsistenciaAccesos();
-    var i = list.findIndex(function(a) { return a && a.id === u.sessionId; });
-    if (i >= 0) {
-      list[i].logoutAt = Date.now();
-      list[i].type = 'logout';
-      saveAsistenciaAccesos(list);
-    }
-  }
-  asSetSession(null);
   _asJustEnded = null;
   _asDayPhotos = [];
   if (_asTimerInt) { clearInterval(_asTimerInt); _asTimerInt = null; }
-  renderAsistencia();
-  asRefreshAfterRoleChange();
+  logoutSession();
 }
 
 function asActiveShift() {
@@ -7357,29 +7525,15 @@ var _countdownInterval = null;
 var _sessionActive = false;
 
 function logoutSession() {
-  // Save current data before closing
+  // Save while the Google token is still valid, then sign out.
+  _bvgStickyAuthError = '';
   try { createSavePoint('auto'); } catch(e) {}
-  sessionStorage.removeItem('bvg_admin_active');
-  sessionStorage.removeItem('bvg_asistencia_session');
-  localStorage.removeItem('bvg_last_login');
-  localStorage.removeItem('bvg_activa_session');
-  try { asSetSession(null); } catch (e) {}
-  document.documentElement.classList.remove('hide-income');
-  document.body.classList.remove('hide-income');
-  _sessionActive = false;
-  // Stop timers
-  clearInactivityTimers();
-  // Hide everything, show login
-  document.getElementById('timeoutOverlay').style.display = 'none';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('loginScreen').style.display = '';
-  document.getElementById('loginPassword').value = '';
-  var err = document.getElementById('loginError');
-  if (err) err.style.display = 'none';
-  // Close any open sidebar on mobile
-  document.getElementById('sidebar').classList.remove('open');
-  var overlay = document.getElementById('overlay');
-  if (overlay) overlay.classList.remove('show');
+  try { bvgMarkAccesoLogout(); } catch (e) {}
+  if (_firebaseAuth && _firebaseAuth.currentUser) {
+    _firebaseAuth.signOut().catch(function() { bvgShowLoggedOut(); });
+  } else {
+    bvgShowLoggedOut();
+  }
   showToast('Sesión cerrada. Cambios guardados.', 'info', 2500);
 }
 
@@ -7445,6 +7599,22 @@ function fixMobileVH() {
 }
 fixMobileVH();
 window.addEventListener('resize', fixMobileVH);
+
+// Auth listener is registered after the rest of the script so session helpers exist.
+if (_firebaseAuth && typeof firebase !== 'undefined') {
+  _firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function() {}).then(function() {
+    return _firebaseAuth.getRedirectResult();
+  }).then(function() {
+    _firebaseAuth.onAuthStateChanged(bvgOnAuthState);
+  }).catch(function(err) {
+    var msg = bvgAuthErrorMessage(err);
+    if (msg) _bvgStickyAuthError = msg;
+    _firebaseAuth.onAuthStateChanged(bvgOnAuthState);
+  });
+} else {
+  _bvgStickyAuthError = 'Firebase Auth no está listo en este navegador.';
+  bvgShowLoggedOut();
+}
 </script>
 
 <!-- Client Detail Modal -->

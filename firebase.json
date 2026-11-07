@@ -1,5 +1,21 @@
 {
+  "database": {
+    "rules": "database.rules.json"
+  },
   "storage": {
     "rules": "storage.rules"
+  },
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "ALORA BVG",
+        "supportEmail": "coquegaytan@gmail.com",
+        "authorizedRedirectUris": [
+          "https://coquegaytan-tech0314.github.io",
+          "https://rentasbvg-50a41.firebaseapp.com/__/auth/handler",
+          "http://localhost"
+        ]
+      }
+    }
   }
 }

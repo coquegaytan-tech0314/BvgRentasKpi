@@ -1,0 +1,6 @@
+{
+  "rules": {
+    ".read": "auth != null && auth.token.email_verified == true && auth.token.email != null && (auth.token.email.toLowerCase() == 'coquegaytan@gmail.com' || auth.token.email.toLowerCase() == 'martinezcalderonedithvaleria@gmail.com')",
+    ".write": "auth != null && auth.token.email_verified == true && auth.token.email != null && (auth.token.email.toLowerCase() == 'coquegaytan@gmail.com' || auth.token.email.toLowerCase() == 'martinezcalderonedithvaleria@gmail.com')"
+  }
+}
