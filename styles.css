@@ -158,21 +158,9 @@ tr:hover { background: var(--bg-hover); }
 .alora-window-md { width: 56px; height: 56px; }
 .alora-sub { color: var(--text-secondary); font-size: .85rem; }
 .login-box .alora-brand-stack { margin-bottom: .85rem; }
-.login-box p.alora-sub { margin-bottom: 1rem; }
-.login-box .login-hint {
-  color: var(--text-secondary);
-  font-size: .82rem;
-  line-height: 1.45;
-  margin: 0 0 1rem;
-}
-.login-box .login-status {
-  color: var(--text-muted);
-  font-size: .75rem;
-  margin: .75rem 0 0;
-}
+.login-box p.alora-sub { margin-bottom: 1.5rem; }
 .login-box input { width: 100%; margin-bottom: 1rem; }
 .login-box .error { color: var(--red); font-size: .8rem; display: none; margin-bottom: .5rem; }
-.login-box button:disabled { opacity: .6; cursor: default; }
 .login-box button {
   width: 100%;
   background: var(--accent);
