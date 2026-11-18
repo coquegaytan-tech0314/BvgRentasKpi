@@ -471,4 +471,98 @@ var histFn = html.match(/function renderReceiptHistory\(\) \{[\s\S]*?\nfunction 
 if (!histFn || histFn[0].indexOf('if (!asCanSeeRevenue())') === -1) throw new Error('colaboradora must not render receipt history');
 if (html.indexOf("showToast('El historial de recibos es solo para Koke (0314)'") === -1) throw new Error('delete/redownload must stay admin-only');
 
+
+if (html.indexOf('var CHECKIN_TIME = \'\';') === -1 || html.indexOf('var CHECKOUT_TIME = \'\';') === -1) {
+  throw new Error('CHECKIN_TIME and CHECKOUT_TIME must default to empty');
+}
+if (html.indexOf('function openGuestReceiptModal') === -1) throw new Error('admin guest receipt modal missing');
+if (html.indexOf('function drawAloraReceiptCanvas') === -1) throw new Error('canvas receipt renderer missing');
+if (html.indexOf('function stripEncargadoSuffix') === -1) throw new Error('guest name suffix strip missing');
+if (html.indexOf('function printAloraReceipt') === -1) throw new Error('window.print receipt view missing');
+if (html.indexOf('ALORA_RECEIPT_MARK_SRC = \'assets/alora-login-mark.png\'') === -1) {
+  throw new Error('receipt must use the locked login mark');
+}
+if (html.indexOf("openGuestReceiptModal(' + b.id + ')") === -1) throw new Error('tracking Recibo button must open the guest receipt modal');
+if (html.indexOf("goToReceiptFromBooking(' + b.id + ')") !== -1) throw new Error('tracking Recibo button should no longer jump to the old form only');
+if (html.split("openGuestReceiptModal(' + b.id + ')").length < 3) throw new Error('Recibo button must appear on the booking row and in the detail row');
+if (html.indexOf("(seeRev ? '<button class=\"btn btn-outline btn-sm\" onclick=\"event.stopPropagation();openGuestReceiptModal(' + b.id + ')\"") === -1) {
+  throw new Error('row Recibo button must stay behind seeRev');
+}
+if (html.indexOf('Los recibos de huésped son solo para Koke (0314)') === -1) {
+  throw new Error('guest receipt modal must refuse the colaboradora');
+}
+
+function stripEncargadoSuffix(name) {
+  var raw = String(name || '').trim();
+  if (!raw) return '';
+  var parts = raw.split(/\s+\/\s+/);
+  if (parts.length < 2) return raw;
+  var aliases = {
+    COQUE: 1, KOKE: 1, VALERY: 1, VALERIE: 1, VALERIA: 1,
+    MIRIS: 1, DAVID: 1, BALTA: 1, VANE: 1, ULISES: 1, NANI: 1,
+    MANTENIMIENTO: 1, 'SR. MARIO': 1, 'SR MARIO': 1
+  };
+  while (parts.length > 1) {
+    var last = parts[parts.length - 1].trim().toUpperCase();
+    if (aliases[last]) parts.pop();
+    else break;
+  }
+  return parts.join(' / ');
+}
+if (stripEncargadoSuffix('ERIC ZIRNSAK / COQUE') !== 'ERIC ZIRNSAK') throw new Error('strip COQUE suffix');
+if (stripEncargadoSuffix('ESMERALDA / VALERIA / COQUE') !== 'ESMERALDA') throw new Error('strip stacked encargado suffixes');
+if (stripEncargadoSuffix('Miguel Hernández / BALTA') !== 'Miguel Hernández') throw new Error('strip BALTA suffix');
+if (stripEncargadoSuffix('Ada López') !== 'Ada López') throw new Error('name without suffix stays');
+
+function receiptNumberForId(id, isoDate) {
+  var s = String(isoDate || '');
+  var p = s.split('-');
+  var mmdd = (p.length >= 3) ? (p[1] + p[2]) : '0000';
+  return 'BVG-' + id + '-' + mmdd;
+}
+if (receiptNumberForId(156, '2026-11-17') !== 'BVG-156-1117') throw new Error('folio BVG-id-MMDD');
+
+function fmtReceiptDate(iso) {
+  var months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var p = String(iso).split('-');
+  return parseInt(p[2], 10) + ' ' + months[parseInt(p[1], 10) - 1] + ' ' + p[0];
+}
+if (fmtReceiptDate('2026-11-26') !== '26 nov 2026') throw new Error('receipt date format');
+if (fmtReceiptDate('2026-11-17') !== '17 nov 2026') throw new Error('receipt issued date format');
+
+
+if (html.indexOf('function suggestReceiptPaymentType') === -1) throw new Error('payment type helper missing');
+if (html.indexOf('name="grPaymentType"') === -1) throw new Error('pre-render modal must offer Anticipo, Abono, Liquidación');
+if (html.indexOf('Tipo de pago / Payment type') === -1) throw new Error('receipt must show payment type row');
+if (html.indexOf('Total estancia / Stay total') === -1) throw new Error('receipt must show stay total');
+if (html.indexOf('Pagado a la fecha / Paid to date') === -1) throw new Error('receipt must show paid to date');
+if (html.indexOf('alora-receipt-type-tag') === -1) throw new Error('coral payment-type tag missing');
+
+function suggestReceiptPaymentType(thisPayment, stayTotal, recordedAnticipo) {
+  var pay = Number(thisPayment) || 0;
+  var total = Number(stayTotal) || 0;
+  var recorded = Number(recordedAnticipo) || 0;
+  var alreadyIncluded;
+  if (total > 0) alreadyIncluded = (recorded + pay > total) && recorded >= pay;
+  else alreadyIncluded = recorded >= pay && pay > 0;
+  var paidSoFar = alreadyIncluded ? Math.max(recorded, pay) : recorded + pay;
+  var previousPaid = Math.max(0, paidSoFar - pay);
+  var balance = total > 0 ? Math.max(0, total - paidSoFar) : 0;
+  var type;
+  if (total > 0 && balance <= 0) type = 'liquidacion';
+  else if (previousPaid <= 0) type = 'anticipo';
+  else type = 'abono';
+  return { type: type, paidSoFar: paidSoFar, previousPaid: previousPaid, balance: balance };
+}
+var full = suggestReceiptPaymentType(19200, 19200, 19200);
+if (full.type !== 'liquidacion' || full.balance !== 0 || full.paidSoFar !== 19200) throw new Error('full payment is liquidacion');
+var depNew = suggestReceiptPaymentType(12000, 19200, 0);
+if (depNew.type !== 'anticipo' || depNew.paidSoFar !== 12000 || depNew.balance !== 7200) throw new Error('first unrecorded payment is anticipo');
+var depRec = suggestReceiptPaymentType(12000, 19200, 12000);
+if (depRec.type !== 'anticipo' || depRec.previousPaid !== 0) throw new Error('first recorded deposit is anticipo');
+var lastPay = suggestReceiptPaymentType(7200, 19200, 12000);
+if (lastPay.type !== 'liquidacion' || lastPay.paidSoFar !== 19200 || lastPay.balance !== 0) throw new Error('remaining balance payment is liquidacion');
+var mid = suggestReceiptPaymentType(5000, 19200, 12000);
+if (mid.type !== 'abono' || mid.paidSoFar !== 17000 || mid.balance !== 2200) throw new Error('middle payment is abono');
+
 console.log('as-alora-checklist.test.js ok');

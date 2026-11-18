@@ -1383,9 +1383,169 @@ input[type="date"] { min-height: 44px; }
   .main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
+/* ============================================================
+   ALORA GUEST RECEIPT
+   ============================================================ */
+.alora-receipt-sheet {
+  width: 900px;
+  background: #F5EEE3;
+  padding: 50px;
+  box-sizing: border-box;
+  color: #2E2E2E;
+  font-family: "DejaVu Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.alora-receipt-card {
+  background: #fff;
+  border-radius: 30px;
+  padding: 40px 60px 70px;
+  box-sizing: border-box;
+  text-align: center;
+}
+.alora-receipt-mark {
+  display: block;
+  height: 140px;
+  width: auto;
+  margin: 0 auto 15px;
+}
+.alora-receipt-wordmark {
+  display: block;
+  width: 260px;
+  height: auto;
+  margin: 0 auto 25px;
+}
+.alora-receipt-sub {
+  margin: 0 0 48px;
+  font-size: 22px;
+  color: #777;
+  font-weight: 400;
+}
+.alora-receipt-title {
+  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #E86F5A;
+  letter-spacing: 0.2px;
+}
+.alora-receipt-type-tag {
+  display: inline-block;
+  margin: 0 0 40px;
+  padding: 6px 18px;
+  border: 2px solid #E86F5A;
+  border-radius: 999px;
+  color: #E86F5A;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+.alora-receipt-paidsofar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 22px;
+  color: #777;
+  margin-bottom: 18px;
+}
+.alora-receipt-paidsofar span:last-child {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2E2E2E;
+  text-align: right;
+}
+.alora-receipt-rows {
+  text-align: left;
+}
+.alora-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  min-height: 52px;
+  font-size: 22px;
+  color: #777;
+}
+.alora-receipt-row span:last-child {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2E2E2E;
+  text-align: right;
+}
+.alora-receipt-rule {
+  border: 0;
+  border-top: 2px solid #ddd;
+  margin: 18px 0 28px;
+}
+.alora-receipt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2E2E2E;
+  margin-bottom: 28px;
+}
+.alora-receipt-total span:last-child {
+  font-size: 32px;
+  color: #E86F5A;
+}
+.alora-receipt-balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 22px;
+  color: #777;
+  margin-bottom: 48px;
+}
+.alora-receipt-balance span:last-child {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2E2E2E;
+  text-align: right;
+}
+.alora-receipt-thanks {
+  margin: 0 0 64px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #2E2E2E;
+}
+.alora-receipt-sign-line {
+  width: 360px;
+  border: 0;
+  border-top: 2px solid #2E2E2E;
+  margin: 0 auto 18px;
+}
+.alora-receipt-sign {
+  margin: 0;
+  font-size: 22px;
+  color: #777;
+}
+.alora-receipt-preview-scale {
+  overflow: auto;
+  background: #F5EEE3;
+  display: flex;
+  justify-content: center;
+  padding: 0;
+}
+#guestReceiptViewModal .modal { max-width: 960px; }
+#aloraReceiptPrintRoot { display: none; }
+
 /* Print styles for receipts */
 @media print {
-  body { background: #fff !important; color: #000 !important; }
+  @page { margin: 0; size: auto; }
+  html, body { background: #F5EEE3 !important; color: #2E2E2E !important; }
+  body > *:not(#aloraReceiptPrintRoot) { display: none !important; }
+  #aloraReceiptPrintRoot {
+    display: flex !important;
+    justify-content: center;
+    background: #F5EEE3 !important;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .alora-receipt-sheet { box-shadow: none; }
   .sidebar, .hamburger, .mobile-topbar, .bottom-nav, .modal-header, .modal-footer, #toastContainer { display: none !important; }
   .receipt-paper { box-shadow: none; width: 100%; }
 }

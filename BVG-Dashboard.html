@@ -429,7 +429,8 @@ function aloraApplyWindowSeason() {
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap">
               <button class="btn btn-primary" onclick="previewReceipt()">Vista Previa</button>
-              <button class="btn btn-success" onclick="generateReceiptPDF()">Descargar PDF</button>
+              <button class="btn btn-success" onclick="downloadAloraReceiptFromForm()">Descargar PNG</button>
+              <button class="btn btn-outline" onclick="generateReceiptPDF()">Imprimir / PDF</button>
               <button class="btn btn-outline" onclick="saveReceiptToHistory()">Guardar en Historial</button>
             </div>
           </div>
@@ -1228,6 +1229,50 @@ function aloraApplyWindowSeason() {
     </div>
   </div>
 </div>
+
+<!-- Guest receipt: edit fields before rendering (admin only) -->
+<div class="modal-overlay" id="guestReceiptEditModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h3>Recibo de pago</h3><button class="modal-close" onclick="closeModal('guestReceiptEditModal')">×</button></div>
+    <div class="modal-body">
+      <p class="as-muted" style="margin-top:0">Revisa el nombre, el tipo de pago y las horas. Las horas se ocultan si quedan vacías. El tipo se sugiere según el saldo, y lo puedes cambiar.</p>
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group"><label>Huésped / Guest</label><input type="text" id="grGuest"></div>
+        <div class="form-group"><label>Hora de entrada / Check-in</label><input type="text" id="grCheckinTime" placeholder="ej. 3:00 PM"></div>
+        <div class="form-group"><label>Hora de salida / Check-out</label><input type="text" id="grCheckoutTime" placeholder="ej. 12:00 PM"></div>
+        <div class="form-group"><label>Este pago / This payment (MXN)</label><input type="number" id="grPaid" step="0.01" oninput="syncGuestReceiptPaymentType()"></div>
+        <div class="form-group"><label>Tipo de pago / Payment type</label>
+          <div class="radio-group">
+            <label><input type="radio" name="grPaymentType" value="anticipo" onchange="markGuestReceiptTypeManual()"> Anticipo (depósito)</label>
+            <label><input type="radio" name="grPaymentType" value="abono" onchange="markGuestReceiptTypeManual()"> Abono (parcial)</label>
+            <label><input type="radio" name="grPaymentType" value="liquidacion" onchange="markGuestReceiptTypeManual()"> Liquidación (final)</label>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="grBookingId">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('guestReceiptEditModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="previewGuestReceipt()">Ver recibo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Guest receipt preview -->
+<div class="modal-overlay" id="guestReceiptViewModal">
+  <div class="modal" style="max-width:960px">
+    <div class="modal-header"><h3>Recibo de pago</h3><button class="modal-close" onclick="closeModal('guestReceiptViewModal')">×</button></div>
+    <div class="modal-body" style="padding:0">
+      <div id="guestReceiptViewArea" class="alora-receipt-preview-scale"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('guestReceiptViewModal')">Cerrar</button>
+      <button class="btn btn-outline" onclick="printCurrentAloraReceipt()">Imprimir / PDF</button>
+      <button class="btn btn-success" onclick="downloadCurrentAloraReceiptPng()">Descargar PNG</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ============================================================
      JAVASCRIPT
@@ -5433,7 +5478,7 @@ function renderTracking() {
       '<td>' + esc(b.encargado) + '</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();editBooking(' + b.id + ')" title="Editar">✏️</button> ' +
-        (seeRev ? '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();goToReceiptFromBooking(' + b.id + ')" title="Generar Recibo" style="color:var(--green)">🧾</button> ' : '') +
+        (seeRev ? '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openGuestReceiptModal(' + b.id + ')" title="Generar Recibo" style="color:var(--green)">Recibo</button> ' : '') +
         '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();deleteBooking(' + b.id + ')" title="Eliminar" style="color:var(--red)">🗑</button>' +
       '</td>' +
     '</tr>';
@@ -5443,6 +5488,7 @@ function renderTracking() {
         '<div><label>Booking #</label>' + esc(b.book || '—') + '</div>' +
         '<div><label>Notas</label>' + esc(b.notas || '—') + '</div>' +
         (seeRev ? '<div><label>Precio especial</label>' + (b.specialPrice ? fmtMoney(b.specialRate) + '/noche' : 'No') + '</div>' : '') +
+        (seeRev ? '<div><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openGuestReceiptModal(' + b.id + ')" title="Generar Recibo" style="color:var(--green)">Recibo</button></div>' : '') +
       '</div></td></tr>';
     }
   });
@@ -5849,6 +5895,553 @@ function initReceiptForm() {
   document.getElementById('rcNumero').value = getNextReceiptNumber();
 }
 
+/* ============================================================
+   ALORA GUEST RECEIPTS (admin only)
+   Usual check-in / check-out times. Left empty until Koke
+   confirms the hours; the pre-render modal can fill them per stay.
+   ============================================================ */
+var CHECKIN_TIME = '';
+var CHECKOUT_TIME = '';
+var _aloraReceiptModel = null;
+var ALORA_RECEIPT_MARK_SRC = 'assets/alora-login-mark.png';
+var ALORA_RECEIPT_WORDMARK_SRC = 'assets/alora-wordmark.png';
+var ALORA_RECEIPT_MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function receiptMexicoCityYmd(dateObj) {
+  var d = dateObj instanceof Date ? dateObj : new Date();
+  try {
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(d);
+    var y = '', m = '', day = '';
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === 'year') y = parts[i].value;
+      if (parts[i].type === 'month') m = parts[i].value;
+      if (parts[i].type === 'day') day = parts[i].value;
+    }
+    if (y && m && day) return y + '-' + m + '-' + day;
+  } catch (e) {}
+  var yy = d.getFullYear();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return yy + '-' + mm + '-' + dd;
+}
+function fmtReceiptDate(iso) {
+  var s = String(iso || receiptMexicoCityYmd());
+  var p = s.split('-');
+  if (p.length < 3) return s;
+  var month = ALORA_RECEIPT_MONTHS[parseInt(p[1], 10) - 1] || p[1];
+  return parseInt(p[2], 10) + ' ' + month + ' ' + p[0];
+}
+function formatReceiptDateTime(iso, timeStr) {
+  var d = fmtReceiptDate(iso);
+  var t = String(timeStr || '').trim();
+  return t ? (d + ' · ' + t) : d;
+}
+function fmtReceiptMoney(n) {
+  return fmtMoney(n) + ' MXN';
+}
+function parseReceiptAmount(v) {
+  if (typeof v === 'number' && isFinite(v)) return v;
+  var s = String(v == null ? '' : v).replace(/,/g, '').replace(/[^0-9.]/g, '');
+  var n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+function receiptNumberForId(id, isoDate) {
+  var s = String(isoDate || receiptMexicoCityYmd());
+  var p = s.split('-');
+  var mmdd = (p.length >= 3) ? (p[1] + p[2]) : '0000';
+  return 'BVG-' + id + '-' + mmdd;
+}
+function receiptFilename(guest, depto) {
+  var g = String(guest || 'Huesped').replace(/\s+/g, '-').replace(/[^\w.\-áéíóúÁÉÍÓÚñÑ]/g, '');
+  var unit = String(depto || '').replace(/\s+/g, '');
+  if (/1404/i.test(unit) && /norte/i.test(String(depto || ''))) unit = '1404N';
+  else if (/1401/i.test(unit) && /sur/i.test(String(depto || ''))) unit = '1401S';
+  else if (/1204/i.test(unit)) unit = '1204N';
+  return 'Recibo-' + g + (unit ? '-' + unit : '');
+}
+function stripEncargadoSuffix(name) {
+  var raw = String(name || '').trim();
+  if (!raw) return '';
+  var parts = raw.split(/\s+\/\s+/);
+  if (parts.length < 2) return raw;
+  var aliases = {
+    COQUE: 1, KOKE: 1, VALERY: 1, VALERIE: 1, VALERIA: 1,
+    MIRIS: 1, DAVID: 1, BALTA: 1, VANE: 1, ULISES: 1, NANI: 1,
+    MANTENIMIENTO: 1, 'SR. MARIO': 1, 'SR MARIO': 1
+  };
+  try {
+    var enc = (getSettings() && getSettings().encargados) || [];
+    for (var i = 0; i < enc.length; i++) aliases[String(enc[i]).toUpperCase()] = 1;
+  } catch (e) {}
+  while (parts.length > 1) {
+    var last = parts[parts.length - 1].trim().toUpperCase();
+    if (aliases[last]) parts.pop();
+    else break;
+  }
+  return parts.join(' / ');
+}
+function receiptNightlyRate(booking, nights) {
+  if (!booking) return 0;
+  if (booking.specialPrice && booking.specialRate) return Number(booking.specialRate) || 0;
+  if (nights) return (Number(booking.total) || 0) / nights;
+  return 0;
+}
+
+var ALORA_PAYMENT_TYPES = {
+  anticipo: { key: 'anticipo', row: 'Anticipo / Deposit', tag: 'ANTICIPO / DEPOSIT' },
+  abono: { key: 'abono', row: 'Abono / Partial', tag: 'ABONO / PARTIAL PAYMENT' },
+  liquidacion: { key: 'liquidacion', row: 'Liquidación / Final', tag: 'LIQUIDACIÓN / FINAL PAYMENT' }
+};
+function receiptPaymentTypeInfo(key) {
+  return ALORA_PAYMENT_TYPES[key] || ALORA_PAYMENT_TYPES.anticipo;
+}
+function suggestReceiptPaymentType(thisPayment, stayTotal, recordedAnticipo) {
+  var pay = parseReceiptAmount(thisPayment);
+  var total = parseReceiptAmount(stayTotal);
+  var recorded = parseReceiptAmount(recordedAnticipo);
+  var alreadyIncluded;
+  if (total > 0) alreadyIncluded = (recorded + pay > total) && recorded >= pay;
+  else alreadyIncluded = recorded >= pay && pay > 0;
+  var paidSoFar = alreadyIncluded ? Math.max(recorded, pay) : recorded + pay;
+  var previousPaid = Math.max(0, paidSoFar - pay);
+  var balance = total > 0 ? Math.max(0, total - paidSoFar) : 0;
+  var type;
+  if (total > 0 && balance <= 0) type = 'liquidacion';
+  else if (previousPaid <= 0) type = 'anticipo';
+  else type = 'abono';
+  return { type: type, paidSoFar: paidSoFar, previousPaid: previousPaid, balance: balance, stayTotal: total, thisPayment: pay };
+}
+
+function buildAloraReceiptModel(opts) {
+  opts = opts || {};
+  var fecha = opts.fecha || receiptMexicoCityYmd();
+  var nights = (opts.nights != null) ? opts.nights : daysBetween(opts.entrada, opts.salida);
+  var paid = parseReceiptAmount(opts.paid);
+  var total = parseReceiptAmount(opts.total);
+  var recorded = opts.recordedPaid != null ? parseReceiptAmount(opts.recordedPaid) : paid;
+  var showRev = opts.showRevenue !== false;
+  var suggestion = suggestReceiptPaymentType(paid, total, recorded);
+  var typeKey = opts.paymentType || suggestion.type;
+  if (!ALORA_PAYMENT_TYPES[typeKey]) typeKey = suggestion.type;
+  var typeInfo = receiptPaymentTypeInfo(typeKey);
+  var numero = opts.numero || receiptNumberForId(opts.id || '0', fecha);
+  var rows = [
+    ['Fecha / Date', fmtReceiptDate(fecha)],
+    ['Recibo / Receipt No.', numero],
+    ['Huésped / Guest', opts.guest || ''],
+    ['Depto / Unit', (opts.depto || '') + ' · Bay View Grand'],
+    ['Entrada / Check-in', formatReceiptDateTime(opts.entrada, opts.checkinTime)],
+    ['Salida / Check-out', formatReceiptDateTime(opts.salida, opts.checkoutTime)],
+    ['Noches / Nights', String(nights)],
+    ['Tipo de pago / Payment type', typeInfo.row]
+  ];
+  if (showRev) {
+    rows.push(['Tarifa / Rate', fmtReceiptMoney(opts.rate) + ' / noche']);
+    rows.push(['Total estancia / Stay total', fmtReceiptMoney(suggestion.stayTotal)]);
+  }
+  return {
+    rows: rows,
+    paymentType: typeKey,
+    typeTag: typeInfo.tag,
+    totalValue: fmtReceiptMoney(suggestion.thisPayment),
+    showBalance: showRev,
+    paidSoFarValue: fmtReceiptMoney(suggestion.paidSoFar),
+    balanceValue: fmtReceiptMoney(suggestion.balance),
+    guest: opts.guest || '',
+    depto: opts.depto || '',
+    filename: receiptFilename(opts.guest, opts.depto)
+  };
+}
+
+function buildAloraReceiptModelFromBooking(booking, overrides) {
+  overrides = overrides || {};
+  if (!booking) return null;
+  var nights = daysBetween(booking.entrada, booking.salida);
+  var paid = overrides.paid != null ? parseReceiptAmount(overrides.paid) : parseReceiptAmount(booking.anticipo);
+  var guest = overrides.guest != null ? String(overrides.guest).trim() : stripEncargadoSuffix(booking.rent);
+  var checkinTime = overrides.checkinTime != null ? overrides.checkinTime : CHECKIN_TIME;
+  var checkoutTime = overrides.checkoutTime != null ? overrides.checkoutTime : CHECKOUT_TIME;
+  return buildAloraReceiptModel({
+    id: booking.id,
+    guest: guest,
+    depto: booking.depto,
+    entrada: booking.entrada,
+    salida: booking.salida,
+    nights: nights,
+    rate: receiptNightlyRate(booking, nights),
+    paid: paid,
+    total: booking.total,
+    recordedPaid: booking.anticipo,
+    paymentType: overrides.paymentType,
+    fecha: overrides.fecha || receiptMexicoCityYmd(),
+    checkinTime: checkinTime,
+    checkoutTime: checkoutTime,
+    showRevenue: typeof asCanSeeRevenue !== 'function' || asCanSeeRevenue()
+  });
+}
+
+function buildAloraReceiptHTML(model) {
+  if (!model) return '';
+  var rowsHtml = model.rows.map(function(row) {
+    return '<div class="alora-receipt-row"><span>' + esc(row[0]) + '</span><span>' + esc(row[1]) + '</span></div>';
+  }).join('');
+  var summaryHtml = '';
+  if (model.showBalance) {
+    summaryHtml += '<div class="alora-receipt-paidsofar"><span>Pagado a la fecha / Paid to date</span><span>' + esc(model.paidSoFarValue) + '</span></div>';
+    summaryHtml += '<div class="alora-receipt-balance"><span>Saldo pendiente / Balance due</span><span>' + esc(model.balanceValue) + '</span></div>';
+  }
+  var tagHtml = model.typeTag ? '<div class="alora-receipt-type-tag">' + esc(model.typeTag) + '</div>' : '';
+  return '<div class="alora-receipt-sheet receipt-paper">' +
+    '<div class="alora-receipt-card">' +
+      '<img src="' + ALORA_RECEIPT_MARK_SRC + '" alt="" class="alora-receipt-mark">' +
+      '<img src="' + ALORA_RECEIPT_WORDMARK_SRC + '" alt="ALORA" class="alora-receipt-wordmark">' +
+      '<p class="alora-receipt-sub">BVG Residencial · Ixtapa Zihuatanejo</p>' +
+      '<h2 class="alora-receipt-title">RECIBO DE PAGO / PAYMENT RECEIPT</h2>' +
+      tagHtml +
+      '<div class="alora-receipt-rows">' + rowsHtml + '</div>' +
+      '<hr class="alora-receipt-rule">' +
+      '<div class="alora-receipt-total"><span>TOTAL PAGADO / PAID</span><span>' + esc(model.totalValue) + '</span></div>' +
+      summaryHtml +
+      '<p class="alora-receipt-thanks">¡Gracias por su pago! / Thank you!</p>' +
+      '<hr class="alora-receipt-sign-line">' +
+      '<p class="alora-receipt-sign">Jorge A. Gaytán · ALORA Rentals</p>' +
+    '</div>' +
+  '</div>';
+}
+
+function loadReceiptImage(src) {
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() { resolve(img); };
+    img.onerror = function() { reject(new Error('No se pudo cargar ' + src)); };
+    img.src = src;
+  });
+}
+function canvasRoundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function drawAloraReceiptCanvas(model) {
+  if (!model) return Promise.reject(new Error('missing receipt'));
+  var fontReady = (document.fonts && document.fonts.ready) ? document.fonts.ready.catch(function(){}) : Promise.resolve();
+  return fontReady.then(function() {
+    return Promise.all([loadReceiptImage(ALORA_RECEIPT_MARK_SRC), loadReceiptImage(ALORA_RECEIPT_WORDMARK_SRC)]);
+  }).then(function(imgs) {
+    var mark = imgs[0], word = imgs[1];
+    var rows = model.rows || [];
+    var W = 900;
+    var extra = model.typeTag ? 70 : 0;
+    if (model.showBalance) extra += 55;
+    var H = 520 + 52 * rows.length + 420 + extra;
+    var canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#F5EEE3';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ffffff';
+    canvasRoundedRect(ctx, 50, 50, W - 100, H - 100, 30);
+    ctx.fill();
+
+    var mh = 140;
+    var mw = Math.round(140 * mark.width / mark.height);
+    ctx.drawImage(mark, Math.round(W / 2 - mw / 2), 90, mw, mh);
+    var ww = 260;
+    var wh = Math.round(260 * word.height / word.width);
+    var y = 245;
+    ctx.drawImage(word, Math.round(W / 2 - ww / 2), y, ww, wh);
+    y += wh + 25;
+
+    function fontFace(size, bold) {
+      return (bold ? 'bold ' : '') + size + 'px "DejaVu Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif';
+    }
+    ctx.fillStyle = '#777';
+    ctx.font = fontFace(22, false);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('BVG Residencial · Ixtapa Zihuatanejo', W / 2, y);
+    y += 70;
+    ctx.fillStyle = '#E86F5A';
+    ctx.font = fontFace(28, true);
+    ctx.fillText('RECIBO DE PAGO / PAYMENT RECEIPT', W / 2, y);
+    y += 48;
+    if (model.typeTag) {
+      ctx.font = fontFace(16, true);
+      var tagW = ctx.measureText(model.typeTag).width;
+      var padX = 18, padY = 8;
+      var boxW = tagW + padX * 2;
+      var boxH = 16 + padY * 2;
+      var boxX = W / 2 - boxW / 2;
+      var boxY = y - boxH / 2;
+      ctx.strokeStyle = '#E86F5A';
+      ctx.lineWidth = 2;
+      canvasRoundedRect(ctx, boxX, boxY, boxW, boxH, boxH / 2);
+      ctx.stroke();
+      ctx.fillStyle = '#E86F5A';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(model.typeTag, W / 2, y);
+      y += 55;
+    } else {
+      y += 22;
+    }
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    for (var i = 0; i < rows.length; i++) {
+      ctx.fillStyle = '#777';
+      ctx.font = fontFace(22, false);
+      ctx.textAlign = 'left';
+      ctx.fillText(rows[i][0], 110, y);
+      ctx.fillStyle = '#2E2E2E';
+      ctx.font = fontFace(24, true);
+      ctx.textAlign = 'right';
+      ctx.fillText(rows[i][1], W - 110, y);
+      y += 52;
+    }
+
+    ctx.strokeStyle = '#dddddd';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(110, y + 10);
+    ctx.lineTo(W - 110, y + 10);
+    ctx.stroke();
+    y += 40;
+
+    ctx.fillStyle = '#2E2E2E';
+    ctx.font = fontFace(24, true);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('TOTAL PAGADO / PAID', 110, y);
+    ctx.fillStyle = '#E86F5A';
+    ctx.font = fontFace(32, true);
+    ctx.textAlign = 'right';
+    ctx.fillText(model.totalValue, W - 110, y - 4);
+    y += 65;
+
+    if (model.showBalance) {
+      ctx.fillStyle = '#777';
+      ctx.font = fontFace(22, false);
+      ctx.textAlign = 'left';
+      ctx.fillText('Pagado a la fecha / Paid to date', 110, y);
+      ctx.fillStyle = '#2E2E2E';
+      ctx.font = fontFace(24, true);
+      ctx.textAlign = 'right';
+      ctx.fillText(model.paidSoFarValue, W - 110, y);
+      y += 52;
+      ctx.fillStyle = '#777';
+      ctx.font = fontFace(22, false);
+      ctx.textAlign = 'left';
+      ctx.fillText('Saldo pendiente / Balance due', 110, y);
+      ctx.fillStyle = '#2E2E2E';
+      ctx.font = fontFace(24, true);
+      ctx.textAlign = 'right';
+      ctx.fillText(model.balanceValue, W - 110, y);
+      y += 90;
+    } else {
+      y += 40;
+    }
+
+    ctx.fillStyle = '#2E2E2E';
+    ctx.font = fontFace(26, true);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('¡Gracias por su pago! / Thank you!', W / 2, y);
+    y += 100;
+    ctx.strokeStyle = '#2E2E2E';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 180, y);
+    ctx.lineTo(W / 2 + 180, y);
+    ctx.stroke();
+    ctx.fillStyle = '#777';
+    ctx.font = fontFace(22, false);
+    ctx.textBaseline = 'top';
+    ctx.fillText('Jorge A. Gaytán · ALORA Rentals', W / 2, y + 30);
+    return canvas;
+  });
+}
+
+function downloadAloraReceiptPng(model) {
+  if (!model) return Promise.resolve();
+  return drawAloraReceiptCanvas(model).then(function(canvas) {
+    return new Promise(function(resolve) {
+      canvas.toBlob(function(blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (model.filename || 'Recibo-ALORA') + '.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function() { URL.revokeObjectURL(a.href); }, 2000);
+        showToast('PNG descargado: ' + a.download, 'success');
+        resolve(canvas);
+      }, 'image/png');
+    });
+  }).catch(function(err) {
+    console.warn('BVG: no se pudo generar el PNG del recibo', err);
+    showToast('Error al generar el PNG', 'error');
+  });
+}
+
+function printAloraReceipt(model) {
+  if (!model) return;
+  var root = document.getElementById('aloraReceiptPrintRoot');
+  if (!root) return;
+  root.innerHTML = buildAloraReceiptHTML(model);
+  root.setAttribute('aria-hidden', 'false');
+  var cleanup = function() {
+    root.innerHTML = '';
+    root.setAttribute('aria-hidden', 'true');
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+  setTimeout(cleanup, 2000);
+}
+
+function showAloraReceiptView(model) {
+  _aloraReceiptModel = model;
+  var area = document.getElementById('guestReceiptViewArea');
+  if (area) area.innerHTML = buildAloraReceiptHTML(model);
+  var preview = document.getElementById('receiptPreviewArea');
+  if (preview) preview.innerHTML = buildAloraReceiptHTML(model);
+  closeModal('guestReceiptEditModal');
+  openModal('guestReceiptViewModal');
+}
+
+function openGuestReceiptModal(bookingId) {
+  if (!asCanSeeRevenue()) {
+    showToast('Los recibos de huésped son solo para Koke (0314)', 'error');
+    return;
+  }
+  var b = getBookings().find(function(x) { return x.id === bookingId || String(x.id) === String(bookingId); });
+  if (!b) { showToast('No se encontró la reserva', 'error'); return; }
+  document.getElementById('grBookingId').value = String(b.id);
+  document.getElementById('grGuest').value = stripEncargadoSuffix(b.rent);
+  document.getElementById('grCheckinTime').value = CHECKIN_TIME || '';
+  document.getElementById('grCheckoutTime').value = CHECKOUT_TIME || '';
+  document.getElementById('grPaid').value = parseReceiptAmount(b.anticipo) || '';
+  _grTypeManual = false;
+  syncGuestReceiptPaymentType();
+  openModal('guestReceiptEditModal');
+}
+
+var _grTypeManual = false;
+function markGuestReceiptTypeManual() { _grTypeManual = true; }
+function selectedGuestReceiptPaymentType() {
+  var el = document.querySelector('input[name="grPaymentType"]:checked');
+  return el ? el.value : '';
+}
+function setGuestReceiptPaymentType(key) {
+  var radios = document.querySelectorAll('input[name="grPaymentType"]');
+  for (var i = 0; i < radios.length; i++) radios[i].checked = radios[i].value === key;
+}
+function syncGuestReceiptPaymentType() {
+  if (_grTypeManual) return;
+  var idEl = document.getElementById('grBookingId');
+  if (!idEl || !idEl.value) return;
+  var b = getBookings().find(function(x) { return String(x.id) === String(idEl.value); });
+  if (!b) return;
+  var paid = parseReceiptAmount(document.getElementById('grPaid') && document.getElementById('grPaid').value);
+  var suggestion = suggestReceiptPaymentType(paid, b.total, b.anticipo);
+  setGuestReceiptPaymentType(suggestion.type);
+}
+
+function previewGuestReceipt() {
+  if (!asCanSeeRevenue()) {
+    showToast('Los recibos de huésped son solo para Koke (0314)', 'error');
+    return;
+  }
+  var id = document.getElementById('grBookingId').value;
+  var b = getBookings().find(function(x) { return String(x.id) === String(id); });
+  if (!b) { showToast('No se encontró la reserva', 'error'); return; }
+  var guest = (document.getElementById('grGuest').value || '').trim();
+  if (!guest) { showToast('Ingresa el nombre del huésped', 'error'); return; }
+  var paid = parseReceiptAmount(document.getElementById('grPaid').value);
+  var model = buildAloraReceiptModelFromBooking(b, {
+    guest: guest,
+    paid: paid,
+    paymentType: selectedGuestReceiptPaymentType(),
+    checkinTime: document.getElementById('grCheckinTime').value,
+    checkoutTime: document.getElementById('grCheckoutTime').value
+  });
+  showAloraReceiptView(model);
+}
+
+function downloadCurrentAloraReceiptPng() {
+  if (!_aloraReceiptModel) { showToast('Primero genera el recibo', 'error'); return; }
+  return downloadAloraReceiptPng(_aloraReceiptModel);
+}
+function printCurrentAloraReceipt() {
+  if (!_aloraReceiptModel) { showToast('Primero genera el recibo', 'error'); return; }
+  printAloraReceipt(_aloraReceiptModel);
+}
+
+function aloraReceiptModelFromForm() {
+  var cliente = (document.getElementById('rcCliente') && document.getElementById('rcCliente').value || '').trim();
+  var paid = parseReceiptAmount(document.getElementById('rcCantidad') && document.getElementById('rcCantidad').value);
+  if (!cliente) return null;
+  var bookingId = document.getElementById('rcBookingSelect') && document.getElementById('rcBookingSelect').value;
+  var booking = null;
+  if (bookingId) {
+    booking = getBookings().find(function(x) { return String(x.id) === String(bookingId); }) || null;
+  }
+  var depto = (document.getElementById('rcDepto') && document.getElementById('rcDepto').value) || (booking && booking.depto) || '';
+  var entrada = (document.getElementById('rcFechaEntrada') && document.getElementById('rcFechaEntrada').value) || (booking && booking.entrada) || '';
+  var salida = (document.getElementById('rcFechaSalida') && document.getElementById('rcFechaSalida').value) || (booking && booking.salida) || '';
+  var nights = daysBetween(entrada, salida);
+  var total = asCanSeeRevenue() ? parseReceiptAmount(document.getElementById('rcTotalReserva') && document.getElementById('rcTotalReserva').value) : 0;
+  if (asCanSeeRevenue() && booking && !total) total = parseReceiptAmount(booking.total);
+  var rate = 0;
+  if (asCanSeeRevenue()) {
+    rate = booking ? receiptNightlyRate(booking, nights) : (nights ? total / nights : 0);
+  }
+  var fecha = (document.getElementById('rcFecha') && document.getElementById('rcFecha').value) || receiptMexicoCityYmd();
+  var numero = booking
+    ? receiptNumberForId(booking.id, fecha)
+    : receiptNumberForId(document.getElementById('rcNumero') && document.getElementById('rcNumero').value || '0', fecha);
+  var recorded = booking ? booking.anticipo : paid;
+  var paymentType = suggestReceiptPaymentType(paid, total, recorded).type;
+  try {
+    var tipoEl = document.getElementById('rcConceptoTipo');
+    var tipo = tipoEl ? String(tipoEl.value || '') : '';
+    if (tipo.indexOf('ANTICIPO') === 0) paymentType = 'anticipo';
+    else if (tipo.indexOf('LIQUIDACIÓN') === 0 || tipo.indexOf('LIQUIDACION') === 0 || tipo.indexOf('PAGO COMPLETO') === 0) paymentType = 'liquidacion';
+  } catch (e) {}
+  return buildAloraReceiptModel({
+    id: booking ? booking.id : (document.getElementById('rcNumero') && document.getElementById('rcNumero').value || '0'),
+    numero: numero,
+    guest: stripEncargadoSuffix(cliente),
+    depto: depto,
+    entrada: entrada,
+    salida: salida,
+    nights: nights,
+    rate: rate,
+    paid: paid,
+    total: total,
+    recordedPaid: recorded,
+    paymentType: paymentType,
+    fecha: fecha,
+    checkinTime: CHECKIN_TIME,
+    checkoutTime: CHECKOUT_TIME,
+    showRevenue: asCanSeeRevenue() && (total > 0 || (booking && asCanSeeRevenue()))
+  });
+}
+function downloadAloraReceiptFromForm() {
+  var model = aloraReceiptModelFromForm();
+  if (!model) { showToast('Ingresa el nombre del huésped', 'error'); return; }
+  _aloraReceiptModel = model;
+  return downloadAloraReceiptPng(model);
+}
+
+
 function renderRecibos() {
   populateReceiptBookingDropdown();
   if (!asCanSeeRevenue()) {
@@ -5908,40 +6501,12 @@ function buildConceptoText() {
 }
 
 function buildReceiptHTML() {
-  const cliente = document.getElementById('rcCliente').value || '________';
-  const cantidad = parseFloat(document.getElementById('rcCantidad').value) || 0;
-  const numero = document.getElementById('rcNumero').value || '';
-  const fecha = document.getElementById('rcFecha').value || todayStr();
-  const formaPago = document.querySelector('input[name="rcFormaPago"]:checked')?.value || 'Transferencia';
-  const concepto = buildConceptoText();
-
-  const checkEf = formaPago === 'Efectivo' ? '☑' : '☐';
-  const checkTr = formaPago === 'Transferencia' ? '☑' : '☐';
-  const checkDp = formaPago === 'Depósito' ? '☑' : '☐';
-
-  return '<div class="receipt-paper" id="receiptPaperEl">' +
-    '<div class="receipt-header">' +
-      '<div><div class="receipt-title">RECIBO DE PAGO</div></div>' +
-      '<div class="receipt-meta">Fecha: <strong>' + fmtDate(fecha) + '</strong><br>No. <strong>' + esc(String(numero)) + '</strong></div>' +
-    '</div>' +
-    '<div class="receipt-copy">COPIA CLIENTE</div>' +
-    '<div class="receipt-row">' +
-      '<div>Recibí de: <strong>' + esc(cliente) + '</strong></div>' +
-      '<div>Cantidad: <strong>' + fmtMoney(cantidad) + '</strong></div>' +
-    '</div>' +
-    '<div class="receipt-concepto"><strong>Concepto:</strong> ' + esc(concepto) + '</div>' +
-    '<div class="receipt-pago">' +
-      '<strong>Forma de pago:</strong><br>' +
-      '<label>' + checkEf + ' Efectivo</label>' +
-      '<label>' + checkTr + ' Transferencia</label>' +
-      '<label>' + checkDp + ' Depósito</label>' +
-    '</div>' +
-    '<div class="receipt-firma">' +
-      '<strong>Recibido por: Jorge Gaytan</strong>' +
-      'Pedro Guzman #26, Moroleon, GTO<br>' +
-      '4454581888' +
-    '</div>' +
-  '</div>';
+  var model = aloraReceiptModelFromForm();
+  if (!model) {
+    return '<div style="color:var(--text-muted);text-align:center;padding:2rem">Ingresa el nombre del huésped para ver el recibo</div>';
+  }
+  _aloraReceiptModel = model;
+  return buildAloraReceiptHTML(model);
 }
 
 function previewReceipt() {
@@ -5972,100 +6537,16 @@ function enableLiveReceiptPreview() {
 function liveUpdatePreview() {
   var area = document.getElementById('receiptPreviewArea');
   // Only live-update if preview has been activated (not the placeholder text)
-  if (area.querySelector('.receipt-paper')) {
+  if (area.querySelector('.receipt-paper, .alora-receipt-sheet')) {
     area.innerHTML = buildReceiptHTML();
   }
 }
 
 function generateReceiptPDF() {
-  if (typeof html2pdf === 'undefined') {
-    showToast('html2pdf.js no está cargado. Verifica tu conexión a internet.', 'error');
-    return;
-  }
-
-  // Collect form values
-  var clienteRaw = document.getElementById('rcCliente').value || 'Cliente';
-  var cantidad   = parseFloat(document.getElementById('rcCantidad').value) || 0;
-  var numero     = document.getElementById('rcNumero').value || '0';
-  var fecha      = document.getElementById('rcFecha').value || todayStr();
-  var formaPago  = (document.querySelector('input[name="rcFormaPago"]:checked') || {}).value || 'Transferencia';
-  var concepto   = buildConceptoText();
-
-  var checkEf = formaPago === 'Efectivo'      ? '&#9745;' : '&#9744;';
-  var checkTr = formaPago === 'Transferencia' ? '&#9745;' : '&#9744;';
-  var checkDp = formaPago === 'Depósito'      ? '&#9745;' : '&#9744;';
-
-  var filename = 'Recibo-No' + numero + '-' + clienteRaw.replace(/\s+/g, '-') + '-' + fecha + '.pdf';
-
-  // Build a fully self-contained receipt with inline styles.
-  // This isolates the PDF from the dark dashboard theme and guarantees
-  // everything fits on a single letter page on any device.
-  var receiptEl = document.createElement('div');
-  receiptEl.style.cssText = [
-    'position:fixed', 'top:-9999px', 'left:-9999px',
-    'width:176mm',           // letter usable width (215.9mm - 2×20mm margin)
-    'background:#fff',
-    'font-family:Georgia,"Times New Roman",serif',
-    'font-size:13px', 'line-height:1.55', 'color:#000',
-    'box-sizing:border-box', 'padding:14mm 12mm'
-  ].join(';');
-
-  receiptEl.innerHTML = [
-    // ── Header ──────────────────────────────────────────────
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;',
-      'border-bottom:2.5px solid #333;padding-bottom:9px;margin-bottom:12px;">',
-      '<div style="font-size:22px;font-weight:700;color:#8B0000;',
-        'font-family:Georgia,serif;letter-spacing:.5px;">RECIBO DE PAGO</div>',
-      '<div style="text-align:right;font-size:12px;">',
-        'Fecha: <strong>' + fmtDate(fecha) + '</strong><br>',
-        'No. <strong>' + esc(String(numero)) + '</strong>',
-      '</div>',
-    '</div>',
-    // ── COPIA CLIENTE badge ─────────────────────────────────
-    '<div style="display:inline-block;background:#FFD700;color:#000;',
-      'padding:2px 9px;font-weight:700;font-size:11px;margin-bottom:11px;">COPIA CLIENTE</div>',
-    // ── Cliente / Cantidad ──────────────────────────────────
-    '<div style="display:flex;justify-content:space-between;',
-      'padding:5px 0;margin-bottom:6px;border-bottom:1px solid #eee;">',
-      '<div>Recibí de: <strong>' + esc(clienteRaw) + '</strong></div>',
-      '<div>Cantidad: <strong>' + fmtMoney(cantidad) + '</strong></div>',
-    '</div>',
-    // ── Concepto ────────────────────────────────────────────
-    '<div style="border:1px solid #bbb;padding:9px 10px;margin:9px 0;',
-      'font-size:12.5px;line-height:1.5;">',
-      '<strong>Concepto:</strong> ' + esc(concepto),
-    '</div>',
-    // ── Forma de pago ───────────────────────────────────────
-    '<div style="margin:12px 0;text-align:right;">',
-      '<strong>Forma de pago:</strong><br>',
-      '<span style="display:block;font-size:12px;">' + checkEf + ' Efectivo</span>',
-      '<span style="display:block;font-size:12px;">' + checkTr + ' Transferencia</span>',
-      '<span style="display:block;font-size:12px;">' + checkDp + ' Depósito</span>',
-    '</div>',
-    // ── Firma ────────────────────────────────────────────────
-    '<div style="border-top:2px solid #333;margin-top:20px;padding-top:8px;font-size:12px;line-height:1.5;">',
-      '<strong>Recibido por: Jorge Gaytan</strong><br>',
-      'Pedro Guzman #26, Moroleon, GTO<br>',
-      '4454581888',
-    '</div>'
-  ].join('');
-
-  document.body.appendChild(receiptEl);
-
-  html2pdf().set({
-    margin:      [10, 20, 10, 20],   // top, right, bottom, left — in mm
-    filename:    filename,
-    image:       { type: 'jpeg', quality: 0.99 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
-    jsPDF:       { unit: 'mm', format: 'letter', orientation: 'portrait' },
-    pagebreak:   { mode: ['avoid-all'] }   // never split the receipt across pages
-  }).from(receiptEl).save().then(function() {
-    receiptEl.remove();
-    showToast('PDF descargado: ' + filename, 'success');
-  }).catch(function() {
-    receiptEl.remove();
-    showToast('Error al generar PDF', 'error');
-  });
+  var model = aloraReceiptModelFromForm() || _aloraReceiptModel;
+  if (!model) { showToast('Ingresa el nombre del huésped', 'error'); return; }
+  _aloraReceiptModel = model;
+  printAloraReceipt(model);
 }
 
 function saveReceiptToHistory() {
@@ -7451,6 +7932,8 @@ window.addEventListener('resize', fixMobileVH);
 <div class="client-modal-overlay" id="clientModalOverlay" onclick="if(event.target===this)closeClientModal()">
   <div class="client-modal" id="clientModalContent"></div>
 </div>
+
+<div id="aloraReceiptPrintRoot" aria-hidden="true"></div>
 
 </body>
 </html>
