@@ -565,4 +565,47 @@ if (lastPay.type !== 'liquidacion' || lastPay.paidSoFar !== 19200 || lastPay.bal
 var mid = suggestReceiptPaymentType(5000, 19200, 12000);
 if (mid.type !== 'abono' || mid.paidSoFar !== 17000 || mid.balance !== 2200) throw new Error('middle payment is abono');
 
+if (html.indexOf('function openWorkerReceiptForm') === -1) throw new Error('worker receipt entry missing');
+if (html.indexOf('>Hacer recibo<') === -1) throw new Error('Hacer recibo button missing');
+if (html.indexOf('id="workerReceiptCard"') === -1) throw new Error('worker quick form missing');
+if (html.indexOf('type="time" id="wrCheckinTime"') === -1 || html.indexOf('type="time" id="wrCheckoutTime"') === -1) {
+  throw new Error('worker form needs native time pickers');
+}
+if (html.indexOf('type="date" id="wrEntrada"') === -1 || html.indexOf('type="date" id="wrSalida"') === -1) {
+  throw new Error('worker form needs native date pickers');
+}
+if (html.indexOf('value="1204 Norte"') === -1) throw new Error('worker units must include 1204 Norte');
+if (html.indexOf('name="wrPaymentType"') === -1) throw new Error('worker payment type missing');
+if (html.indexOf('id="guestReceiptShareBtn"') === -1) throw new Error('Compartir button missing');
+if (html.indexOf('navigator.share') === -1 || html.indexOf('navigator.canShare') === -1 || html.indexOf('files: [file]') === -1) {
+  throw new Error('Compartir must use the Web Share API with a PNG file');
+}
+if (html.indexOf('function fallbackShareReceiptImage') === -1) throw new Error('share fallback missing');
+if (html.indexOf('showRevenue: false') === -1) throw new Error('worker receipt must force showRevenue false');
+var workerModelFn = html.match(/function workerReceiptModelFromForm\(\) \{[\s\S]*?\nfunction previewWorkerReceipt/);
+if (!workerModelFn) throw new Error('workerReceiptModelFromForm missing');
+if (workerModelFn[0].indexOf('total: 0') === -1 || workerModelFn[0].indexOf('rate: 0') === -1) {
+  throw new Error('worker model must not pass a stay total or nightly rate');
+}
+if (/booking\.total|booking\.anticipo|specialRate|\.lim/.test(workerModelFn[0])) {
+  throw new Error('worker model must not read booking money');
+}
+var workerFillFn = html.match(/function fillWorkerReceiptFromBooking\(\) \{[\s\S]*?\nfunction openWorkerReceiptForm/);
+if (!workerFillFn) throw new Error('fillWorkerReceiptFromBooking missing');
+if (workerFillFn[0].indexOf("paid.value = ''") === -1) throw new Error('picking a booking must clear the typed amount');
+if (/b\.total|b\.anticipo|specialRate|b\.lim|b\.notas|fmtMoney/.test(workerFillFn[0])) {
+  throw new Error('filling a worker receipt from a booking must not copy money or notes');
+}
+var workerListFn = html.match(/function populateWorkerReceiptBookings\(\) \{[\s\S]*?\nfunction selectedWorkerPaymentType/);
+if (!workerListFn || workerListFn[0].indexOf('fmtMoney') !== -1) throw new Error('worker booking list must not show money');
+var workerCards = html.match(/function renderWorkerTrackCards\(page\) \{[\s\S]*?\nfunction populateWorkerReceiptBookings/);
+if (!workerCards || /fmtMoney|b\.total|b\.anticipo/.test(workerCards[0])) {
+  throw new Error('worker tracking cards must not render money');
+}
+if (css.indexOf('.btn.worker-receipt-hero') === -1) throw new Error('thumb-sized Hacer recibo style missing');
+if (css.indexOf('font-size: 16px !important') === -1) throw new Error('inputs must stay at 16px');
+if (css.indexOf('safe-area-inset-bottom') === -1 || css.indexOf('safe-area-inset-top') === -1) {
+  throw new Error('receipt layout must respect safe areas');
+}
+
 console.log('as-alora-checklist.test.js ok');
