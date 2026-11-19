@@ -607,5 +607,33 @@ if (css.indexOf('font-size: 16px !important') === -1) throw new Error('inputs mu
 if (css.indexOf('safe-area-inset-bottom') === -1 || css.indexOf('safe-area-inset-top') === -1) {
   throw new Error('receipt layout must respect safe areas');
 }
+if (html.indexOf('¿Registrar este pago en la reservación?') === -1) throw new Error('existing-booking confirm missing');
+if (html.indexOf('¿Agregar esta reservación al dashboard?') === -1) throw new Error('new-booking confirm missing');
+if (html.indexOf('Comprobante de devolución / Refund receipt') === -1) throw new Error('refund receipt title missing');
+if (html.indexOf('receiptCanApplyToBooking') === -1) throw new Error('cancel and refund must be gated');
+var cashStart = html.indexOf('/* INCOME_CASH_START');
+var cashEnd = html.indexOf('/* INCOME_CASH_END */');
+if (cashStart < 0 || cashEnd < cashStart) throw new Error('income cash helper missing');
+var cashApi = new Function(html.slice(cashStart, cashEnd) + '\nreturn { legacyCashAmount: legacyCashAmount, bookingCashEvents: bookingCashEvents, incomeCashTotal: incomeCashTotal, incomeCashByMonth: incomeCashByMonth, pendingExpectedIncome: pendingExpectedIncome, legacyAnticipoProgress: legacyAnticipoProgress };')();
+var full = { id: 1, depto: '1404 Norte', entrada: '2026-01-10', salida: '2026-01-15', total: 300, anticipo: '3/3', status: 'COMPLETADA' };
+if (cashApi.incomeCashTotal([full], 2026) !== 300) throw new Error('legacy 3/3 must count total once, not twice');
+if (cashApi.legacyCashAmount(full) !== 300) throw new Error('3/3 legacy cash is the stay total');
+var third = { id: 2, depto: '1401 Sur', entrada: '2026-02-01', total: 90, anticipo: '1/3', status: 'POR LLEGAR' };
+if (cashApi.legacyCashAmount(third) !== 30) throw new Error('1/3 is one third of total, not total plus a third');
+var plain = { id: 3, depto: '1404 Norte', entrada: '2026-03-01', total: 20000, anticipo: '5000', status: 'POR LLEGAR' };
+if (cashApi.legacyCashAmount(plain) !== 5000) throw new Error('plain anticipo number is the cash, not added to total');
+var ledger = { id: 4, depto: '1404 Norte', entrada: '2026-01-02', total: 20000, anticipo: '3/3', status: 'POR LLEGAR', payments: [
+  { amount: 17500, date: '2026-01-02', legacy: true },
+  { amount: 8000, date: '2026-11-18', type: 'anticipo' },
+  { amount: -500, date: '2026-11-20', type: 'devolucion' }
+] };
+if (cashApi.bookingCashSum ? false : cashApi.incomeCashTotal([ledger]) !== 25000) throw new Error('ledger replaces anticipo/total; refund subtracts');
+var months = cashApi.incomeCashByMonth([ledger], 2026);
+if (months[0] !== 17500 || months[10] !== 7500) throw new Error('cash is booked on the payment date, got ' + months.join(','));
+var cancelled = { id: 5, depto: '1404 Norte', entrada: '2026-04-01', total: 10000, anticipo: '', status: 'CANCELADA' };
+if (cashApi.pendingExpectedIncome([cancelled, plain]) !== 15000) throw new Error('cancelled unpaid balance must leave pendiente');
+var settled = { id: 6, depto: '1404 Norte', total: 200, paidInFull: true, payments: [{ amount: 50, date: '2026-05-01', type: 'liquidacion' }], status: 'COMPLETADA' };
+if (cashApi.incomeCashTotal([settled]) !== 200) throw new Error('liquidación tops cash up to the stay total without adding it twice');
+if (cashApi.pendingExpectedIncome([settled]) !== 0) throw new Error('paid in full has no pendiente');
 
 console.log('as-alora-checklist.test.js ok');

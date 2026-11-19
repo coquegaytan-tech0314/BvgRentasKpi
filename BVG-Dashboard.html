@@ -221,6 +221,7 @@ function aloraApplyWindowSeason() {
           <button type="button" class="btn btn-primary worker-receipt-hero" onclick="openWorkerReceiptForm()">Hacer recibo</button>
           <p class="as-muted">Recibo para el huésped. Solo el pago que tú escribes, sin totales de la reserva.</p>
         </div>
+        <div id="adminReceiptAlert" class="receipt-request-alert" style="display:none"></div>
 
         <!-- KPI Cards -->
         <div class="kpi-grid" id="kpiGrid"></div>
@@ -443,10 +444,13 @@ function aloraApplyWindowSeason() {
             <div class="form-group full">
               <label>Tipo de pago *</label>
               <div class="wr-pay-types" role="radiogroup" aria-label="Tipo de pago">
-                <label><input type="radio" name="wrPaymentType" value="anticipo" checked> Anticipo</label>
-                <label><input type="radio" name="wrPaymentType" value="abono"> Abono</label>
-                <label><input type="radio" name="wrPaymentType" value="liquidacion"> Liquidación</label>
+                <label><input type="radio" name="wrPaymentType" value="anticipo" checked onchange="syncWorkerMovementHint()"> Anticipo</label>
+                <label><input type="radio" name="wrPaymentType" value="abono" onchange="syncWorkerMovementHint()"> Abono</label>
+                <label><input type="radio" name="wrPaymentType" value="liquidacion" onchange="syncWorkerMovementHint()"> Liquidación</label>
+                <label><input type="radio" name="wrPaymentType" value="cancelacion" onchange="syncWorkerMovementHint()"> Cancelación</label>
+                <label><input type="radio" name="wrPaymentType" value="devolucion" onchange="syncWorkerMovementHint()"> Devolución / reembolso</label>
               </div>
+              <p class="as-muted" id="wrMoveHint" style="display:none">Cancelación y devolución las aprueba Koke. Tú haces el comprobante y le mandas la solicitud.</p>
             </div>
             <div class="form-group full">
               <label for="wrNota">Nota (opcional)</label>
@@ -456,6 +460,18 @@ function aloraApplyWindowSeason() {
           <div class="wr-actions">
             <button type="button" class="btn btn-primary worker-receipt-hero" onclick="previewWorkerReceipt()">Ver recibo</button>
           </div>
+        </div>
+
+        <div id="workerReceiptHistory" class="settings-card" style="display:none">
+          <h3>Mis recibos</h3>
+          <p class="as-muted">Solo los que tú hiciste. Sin totales de la reserva, ni tarifas, ni saldos.</p>
+          <div id="workerReceiptHistoryList" class="worker-stay-list"></div>
+        </div>
+
+        <div id="adminReceiptRequests" class="settings-card" style="display:none">
+          <h3>Solicitudes de Valerie</h3>
+          <p class="as-muted">Cancelaciones y devoluciones. Al aprobar, se aplican a la reserva. La reserva cancelada se conserva y suelta las noches.</p>
+          <div id="adminReceiptRequestList" class="as-list"></div>
         </div>
 
         <div class="chart-grid" id="adminReceiptLayout">
@@ -1324,6 +1340,8 @@ function aloraApplyWindowSeason() {
             <label><input type="radio" name="grPaymentType" value="anticipo" onchange="markGuestReceiptTypeManual()"> Anticipo (depósito)</label>
             <label><input type="radio" name="grPaymentType" value="abono" onchange="markGuestReceiptTypeManual()"> Abono (parcial)</label>
             <label><input type="radio" name="grPaymentType" value="liquidacion" onchange="markGuestReceiptTypeManual()"> Liquidación (final)</label>
+            <label><input type="radio" name="grPaymentType" value="cancelacion" onchange="markGuestReceiptTypeManual()"> Cancelación</label>
+            <label><input type="radio" name="grPaymentType" value="devolucion" onchange="markGuestReceiptTypeManual()"> Devolución / reembolso</label>
           </div>
         </div>
       </div>
@@ -1332,6 +1350,24 @@ function aloraApplyWindowSeason() {
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('guestReceiptEditModal')">Cancelar</button>
       <button class="btn btn-primary" onclick="previewGuestReceipt()">Ver recibo</button>
+    </div>
+  </div>
+</div>
+
+<!-- After a receipt: ask whether to record it. Spanish for Valerie and for Koke. -->
+<div class="modal-overlay" id="receiptSaveModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="receiptSaveTitle">
+    <div class="modal-header">
+      <h3 id="receiptSaveTitle">Guardar en el dashboard</h3>
+      <button type="button" class="modal-close" onclick="answerReceiptSave(false)" aria-label="Cerrar">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="receiptSaveText" class="receipt-save-text"></p>
+      <p id="receiptSaveWarn" class="receipt-save-warn" style="display:none"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline" id="receiptSaveNo" onclick="answerReceiptSave(false)">Ahora no</button>
+      <button type="button" class="btn btn-primary" id="receiptSaveYes" onclick="answerReceiptSave(true)">Sí, registrar</button>
     </div>
   </div>
 </div>
@@ -2727,8 +2763,12 @@ function syncWorkerReceiptChrome() {
   });
   var workerForm = document.getElementById('workerReceiptCard');
   var adminLayout = document.getElementById('adminReceiptLayout');
+  var workerHist = document.getElementById('workerReceiptHistory');
+  var adminReq = document.getElementById('adminReceiptRequests');
   if (workerForm) workerForm.style.display = worker ? '' : 'none';
+  if (workerHist) workerHist.style.display = worker ? '' : 'none';
   if (adminLayout) adminLayout.style.display = worker ? 'none' : '';
+  if (adminReq) adminReq.style.display = worker ? 'none' : '';
   if (!worker) {
     var cards = document.getElementById('workerTrackCards');
     if (cards) { cards.innerHTML = ''; cards.style.display = 'none'; }
@@ -4831,6 +4871,122 @@ function cycleStatus(bookingId) {
 let chartInstances = {};
 function destroyChart(id) { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } }
 
+/* INCOME_CASH_START
+   Cash actually received, by payment date.
+   A booking is counted once:
+   - with a payments list: only those amounts (a refund is negative). total and anticipo are not added again.
+   - without payments: one estimate from the old anticipo mark (3/3 = total, n/3 = that share, or a plain number). The stay total is not added on top.
+   Cancelled stays drop their unpaid balance from pendiente. Money already received still counts until a refund subtracts it.
+*/
+function legacyAnticipoProgress(anticipo) {
+  var s = String(anticipo == null ? '' : anticipo).trim();
+  if (!s) return 0;
+  if (s === '3/3') return 3;
+  if (s === '2/3') return 2;
+  if (s === '1/3') return 1;
+  var m = s.match(/(\d)\s*\/\s*3/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+function legacyPlainAmount(raw) {
+  var s = String(raw == null ? '' : raw).trim();
+  if (!s || s.indexOf('/') >= 0) return 0;
+  var n = parseFloat(s.replace(/,/g, '').replace(/[^0-9.]/g, ''));
+  return isFinite(n) && n > 0 ? n : 0;
+}
+function legacyCashAmount(booking) {
+  if (!booking) return 0;
+  var total = Number(booking.total) || 0;
+  var pays = booking.payments;
+  if (booking.paidInFull && total > 0 && !(pays && pays.length)) return total;
+  var prog = legacyAnticipoProgress(booking.anticipo);
+  if (prog >= 3 && total > 0) return total;
+  if (prog > 0 && total > 0) return Math.round(total * prog / 3);
+  return legacyPlainAmount(booking.anticipo);
+}
+function bookingCashEvents(booking) {
+  if (!booking) return [];
+  var depto = booking.depto || '';
+  var pays = Array.isArray(booking.payments) ? booking.payments : [];
+  if (pays.length) {
+    var events = [];
+    var sum = 0;
+    var i;
+    for (i = 0; i < pays.length; i++) {
+      var amt = Number(pays[i] && pays[i].amount) || 0;
+      events.push({ date: (pays[i] && pays[i].date) || booking.entrada || '', amount: amt, depto: depto });
+      sum += amt;
+    }
+    var total = Number(booking.total) || 0;
+    if (booking.paidInFull && total > sum) {
+      var liqDate = '';
+      for (i = pays.length - 1; i >= 0; i--) {
+        if (pays[i] && pays[i].type === 'liquidacion' && pays[i].date) { liqDate = pays[i].date; break; }
+      }
+      if (!liqDate && pays[pays.length - 1]) liqDate = pays[pays.length - 1].date || '';
+      events.push({ date: liqDate || booking.entrada || '', amount: total - sum, depto: depto });
+    }
+    return events;
+  }
+  var cash = legacyCashAmount(booking);
+  if (!(cash > 0)) return [];
+  return [{ date: booking.entrada || booking.salida || '', amount: cash, depto: depto }];
+}
+function cashEventYear(dateStr) {
+  var s = String(dateStr || '');
+  return s.length >= 4 ? s.slice(0, 4) : '';
+}
+function cashEventMonthIndex(dateStr) {
+  var s = String(dateStr || '');
+  if (s.length < 7) return -1;
+  var m = parseInt(s.slice(5, 7), 10);
+  return (m >= 1 && m <= 12) ? m - 1 : -1;
+}
+function incomeCashTotal(bookings, year, deptoTest) {
+  var sum = 0;
+  (bookings || []).forEach(function(b) {
+    if (!b || (b.depto && String(b.depto).indexOf('Mantenimiento') >= 0)) return;
+    bookingCashEvents(b).forEach(function(ev) {
+      if (year && cashEventYear(ev.date) !== String(year)) return;
+      if (deptoTest && !deptoTest(ev.depto || '')) return;
+      sum += ev.amount;
+    });
+  });
+  return sum;
+}
+function incomeCashByMonth(bookings, year, deptoTest) {
+  var arr = [0,0,0,0,0,0,0,0,0,0,0,0];
+  (bookings || []).forEach(function(b) {
+    if (!b || (b.depto && String(b.depto).indexOf('Mantenimiento') >= 0)) return;
+    bookingCashEvents(b).forEach(function(ev) {
+      if (cashEventYear(ev.date) !== String(year)) return;
+      if (deptoTest && !deptoTest(ev.depto || '')) return;
+      var idx = cashEventMonthIndex(ev.date);
+      if (idx >= 0) arr[idx] += ev.amount;
+    });
+  });
+  return arr;
+}
+function bookingCashSum(booking) {
+  var events = bookingCashEvents(booking);
+  var sum = 0;
+  for (var i = 0; i < events.length; i++) sum += events[i].amount;
+  return sum;
+}
+function pendingExpectedIncome(bookings) {
+  var pending = 0;
+  (bookings || []).forEach(function(b) {
+    if (!b) return;
+    if (b.depto && String(b.depto).indexOf('Mantenimiento') >= 0) return;
+    if (b.status === 'CANCELADA') return;
+    var total = Number(b.total) || 0;
+    if (!(total > 0)) return;
+    if (b.paidInFull) return;
+    pending += Math.max(0, total - bookingCashSum(b));
+  });
+  return pending;
+}
+/* INCOME_CASH_END */
+
 function renderDashboard() {
   const bookings = getBookings();
   const expenses = getExpenses();
@@ -4841,10 +4997,8 @@ function renderDashboard() {
 
   const completed = bookings.filter(b => b.status === 'COMPLETADA');
   const completedNoMaint = completed.filter(b => !b.depto.includes('Mantenimiento'));
-  const completed2026 = completedNoMaint.filter(b => b.entrada && b.entrada.startsWith('2026'));
-  const completed2025 = completedNoMaint.filter(b => b.entrada && b.entrada.startsWith('2025'));
-  const ventas2026 = completed2026.reduce((s, b) => s + (b.total || 0), 0);
-  const ventas2025 = completed2025.reduce((s, b) => s + (b.total || 0), 0);
+  const ventas2026 = incomeCashTotal(bookings, 2026);
+  const ventas2025 = incomeCashTotal(bookings, 2025);
 
   const nightsCompleted = completedNoMaint.reduce((s, b) => s + daysBetween(b.entrada, b.salida), 0);
 
@@ -4861,7 +5015,8 @@ function renderDashboard() {
   const cancelledCount = bookings.filter(b => b.status === 'CANCELADA').length;
 
   // NEW KPIs
-  const avgRate = nightsCompleted > 0 ? Math.round((ventas2025 + ventas2026) / nightsCompleted) : 0;
+  const contracted = completedNoMaint.reduce((s, b) => s + (b.total || 0), 0);
+  const avgRate = nightsCompleted > 0 ? Math.round(contracted / nightsCompleted) : 0;
   const thisMonth = String(yr) + '-' + String(now.getMonth() + 1).padStart(2, '0');
   const bookingsThisMonth = bookings.filter(b => b.entrada && b.entrada.startsWith(thisMonth) && !b.depto.includes('Mantenimiento')).length;
   const next7 = new Date(now.getTime() + 7 * 86400000).toISOString().split('T')[0];
@@ -4869,29 +5024,27 @@ function renderDashboard() {
   const proxLlegadas = bookings.filter(b => b.status === 'POR LLEGAR' && b.entrada >= todayS && b.entrada <= next7).length;
 
   // Revenue by depto
-  const norteRev = completedNoMaint.filter(b => b.depto.includes('1404')).reduce((s,b)=>s+(b.total||0),0);
-  const surRev = completedNoMaint.filter(b => b.depto.includes('1401')).reduce((s,b)=>s+(b.total||0),0);
+  const norteRev = incomeCashTotal(bookings, yr, function(d) { return String(d).indexOf('1404') >= 0; });
+  const surRev = incomeCashTotal(bookings, yr, function(d) { return String(d).indexOf('1401') >= 0; });
 
   const totalBookings = bookings.filter(b => !b.depto.includes('Mantenimiento')).length;
   const cancelRate = totalBookings > 0 ? ((cancelledCount / totalBookings) * 100).toFixed(1) : '0.0';
   const avgStay = completedNoMaint.length > 0 ? (nightsCompleted / completedNoMaint.length).toFixed(1) : '0';
 
   // Collected vs pending
-  const allActiveBookings = bookings.filter(b => ['COMPLETADA','EN CURSO','POR LLEGAR'].includes(b.status) && !b.depto.includes('Mantenimiento'));
-  const totalRevenue = allActiveBookings.reduce((s,b) => s + (b.total||0), 0);
-  const collected = allActiveBookings.filter(b => getPaymentProgress(b.anticipo) === 3).reduce((s,b)=>s+(b.total||0),0);
-  const pendingRev = totalRevenue - collected;
+  const collected = incomeCashTotal(bookings);
+  const pendingRev = pendingExpectedIncome(bookings);
 
   var seeRev = asCanSeeRevenue();
   var kpiHtml = '';
   if (seeRev) {
     kpiHtml +=
-    '<div class="kpi-card kpi-income" data-tooltip="Suma de reservas completadas en 2026" onclick="showSection(\'tracking\')">' +
-      '<div class="kpi-label">Ventas 2026</div>' +
+    '<div class="kpi-card kpi-income" data-tooltip="Dinero recibido en 2026, por fecha de pago. Una devolución resta." onclick="showSection(\'tracking\')">' +
+      '<div class="kpi-label">Ingresos 2026</div>' +
       '<div class="kpi-value" style="color:var(--green)">' + fmtMoney(ventas2026) + '</div>' +
     '</div>' +
-    '<div class="kpi-card" data-tooltip="Ventas 2025" onclick="showSection(\'tracking\')">' +
-      '<div class="kpi-label">Ventas 2025</div>' +
+    '<div class="kpi-card" data-tooltip="Dinero recibido en 2025, por fecha de pago" onclick="showSection(\'tracking\')">' +
+      '<div class="kpi-label">Ingresos 2025</div>' +
       '<div class="kpi-value">' + fmtMoney(ventas2025) + '</div>' +
     '</div>' +
     '<div class="kpi-card" data-tooltip="Tarifa promedio por noche (todas las reservas completadas)">' +
@@ -4907,7 +5060,7 @@ function renderDashboard() {
     '</div>';
   if (seeRev) {
     kpiHtml +=
-    '<div class="kpi-card" data-tooltip="Ventas - Gastos 2026">' +
+    '<div class="kpi-card" data-tooltip="Ingresos recibidos en 2026 menos gastos 2026">' +
       '<div class="kpi-label">Ingresos Netos 2026</div>' +
       '<div class="kpi-value" style="color:' + (netos >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtMoney(netos) + '</div>' +
     '</div>';
@@ -4943,7 +5096,7 @@ function renderDashboard() {
     '</div>';
   if (seeRev) {
     kpiHtml +=
-    '<div class="kpi-card" data-tooltip="Cobrado vs Pendiente">' +
+    '<div class="kpi-card" data-tooltip="Cobrado es dinero recibido. Pendiente es el saldo de reservas que no están canceladas.">' +
       '<div class="kpi-label">Cobrado / Pendiente</div>' +
       '<div class="kpi-value" style="font-size:1rem;color:var(--green)">' + fmtMoney(collected) + '</div>' +
       '<div class="kpi-sub">Pendiente: ' + fmtMoney(pendingRev) + '</div>' +
@@ -4960,6 +5113,7 @@ function renderDashboard() {
   renderDashCharts(bookings, expenses);
   renderMiniCalendar('dashCalendar', now.getFullYear(), now.getMonth());
   renderCRM();
+  try { renderAdminReceiptRequests(); } catch (e) {}
 }
 
 function renderDashCharts(bookings, expenses) {
@@ -4980,24 +5134,16 @@ function renderDashCharts(bookings, expenses) {
   });
 
   // Bar chart: Monthly sales 2026 vs 2025
-  const monthlySales = new Array(12).fill(0);
-  completed.filter(b => b.entrada && b.entrada.startsWith('2026')).forEach(b => {
-    const m = parseInt(b.entrada.split('-')[1]) - 1;
-    monthlySales[m] += b.total || 0;
-  });
-  const monthlySales25 = new Array(12).fill(0);
-  completed.filter(b => b.entrada && b.entrada.startsWith('2025')).forEach(b => {
-    const m = parseInt(b.entrada.split('-')[1]) - 1;
-    monthlySales25[m] += b.total || 0;
-  });
+  const monthlySales = incomeCashByMonth(bookings, 2026);
+  const monthlySales25 = incomeCashByMonth(bookings, 2025);
   destroyChart('chartVentasMensuales');
   if (asCanSeeRevenue()) chartInstances['chartVentasMensuales'] = new Chart(document.getElementById('chartVentasMensuales'), {
     type: 'bar',
     data: {
       labels: months,
       datasets: [
-        { label: '2026', data: monthlySales, backgroundColor: '#FF385C', borderRadius: 4 },
-        { label: '2025', data: monthlySales25, backgroundColor: 'rgba(148,163,184,.3)', borderRadius: 4 }
+        { label: 'Recibido 2026', data: monthlySales, backgroundColor: '#FF385C', borderRadius: 4 },
+        { label: 'Recibido 2025', data: monthlySales25, backgroundColor: 'rgba(148,163,184,.3)', borderRadius: 4 }
       ]
     },
     options: {
@@ -5043,13 +5189,8 @@ function renderDashCharts(bookings, expenses) {
   });
 
   // Monthly income by apartment
-  const norteMonthly = new Array(12).fill(0);
-  const surMonthly = new Array(12).fill(0);
-  completed.filter(b => b.entrada && b.entrada.startsWith('2026')).forEach(b => {
-    const m = parseInt(b.entrada.split('-')[1]) - 1;
-    if (b.depto.includes('1404')) norteMonthly[m] += b.total || 0;
-    else surMonthly[m] += b.total || 0;
-  });
+  const norteMonthly = incomeCashByMonth(bookings, new Date().getFullYear(), function(d) { return String(d).indexOf('1404') >= 0; });
+  const surMonthly = incomeCashByMonth(bookings, new Date().getFullYear(), function(d) { return String(d).indexOf('1401') >= 0; });
   destroyChart('chartIngresoDepto');
   if (asCanSeeRevenue()) chartInstances['chartIngresoDepto'] = new Chart(document.getElementById('chartIngresoDepto'), {
     type: 'bar',
@@ -6136,7 +6277,9 @@ function receiptNightlyRate(booking, nights) {
 var ALORA_PAYMENT_TYPES = {
   anticipo: { key: 'anticipo', row: 'Anticipo / Deposit', tag: 'ANTICIPO / DEPOSIT' },
   abono: { key: 'abono', row: 'Abono / Partial', tag: 'ABONO / PARTIAL PAYMENT' },
-  liquidacion: { key: 'liquidacion', row: 'Liquidación / Final', tag: 'LIQUIDACIÓN / FINAL PAYMENT' }
+  liquidacion: { key: 'liquidacion', row: 'Liquidación / Final', tag: 'LIQUIDACIÓN / FINAL PAYMENT' },
+  cancelacion: { key: 'cancelacion', row: 'Cancelación / Cancellation', tag: 'CANCELACIÓN / CANCELLATION' },
+  devolucion: { key: 'devolucion', row: 'Devolución / Refund', tag: 'DEVOLUCIÓN / REFUND' }
 };
 function receiptPaymentTypeInfo(key) {
   return ALORA_PAYMENT_TYPES[key] || ALORA_PAYMENT_TYPES.anticipo;
@@ -6169,7 +6312,17 @@ function buildAloraReceiptModel(opts) {
   var suggestion = suggestReceiptPaymentType(paid, total, recorded);
   var typeKey = opts.paymentType || suggestion.type;
   if (!ALORA_PAYMENT_TYPES[typeKey]) typeKey = suggestion.type;
+  if (typeKey === 'devolucion' || typeKey === 'cancelacion') showRev = false;
   var typeInfo = receiptPaymentTypeInfo(typeKey);
+  var docTitle = 'RECIBO DE PAGO / PAYMENT RECEIPT';
+  var totalLabel = 'TOTAL PAGADO / PAID';
+  if (typeKey === 'devolucion') {
+    docTitle = 'Comprobante de devolución / Refund receipt';
+    totalLabel = 'DEVUELTO / REFUNDED';
+  } else if (typeKey === 'cancelacion') {
+    docTitle = 'Comprobante de cancelación / Cancellation';
+    totalLabel = 'REGISTRO / RECORD';
+  }
   var numero = opts.numero || receiptNumberForId(opts.id || '0', fecha);
   var rows = [
     ['Fecha / Date', fmtReceiptDate(fecha)],
@@ -6196,7 +6349,24 @@ function buildAloraReceiptModel(opts) {
     guest: opts.guest || '',
     depto: opts.depto || '',
     note: note,
-    filename: receiptFilename(opts.guest, opts.depto)
+    filename: receiptFilename(opts.guest, opts.depto),
+    docTitle: docTitle,
+    totalLabel: totalLabel,
+    hideTotal: typeKey === 'cancelacion' && !(paid > 0),
+    draft: {
+      bookingId: opts.bookingId ? String(opts.bookingId) : '',
+      guest: opts.guest || '',
+      depto: opts.depto || '',
+      entrada: opts.entrada || '',
+      salida: opts.salida || '',
+      checkinTime: String(opts.checkinTime || ''),
+      checkoutTime: String(opts.checkoutTime || ''),
+      paymentType: typeKey,
+      amount: Math.abs(suggestion.thisPayment),
+      note: note,
+      folio: numero,
+      fecha: fecha
+    }
   };
   if (showRev) {
     model.paidSoFarValue = fmtReceiptMoney(suggestion.paidSoFar);
@@ -6221,7 +6391,12 @@ function receiptModelForViewer(model) {
     guest: model.guest,
     depto: model.depto,
     note: model.note,
-    filename: model.filename
+    filename: model.filename,
+    docTitle: model.docTitle,
+    totalLabel: model.totalLabel,
+    hideTotal: model.hideTotal,
+    draft: model.draft,
+    historyId: model.historyId
   };
   return clean;
 }
@@ -6236,6 +6411,7 @@ function buildAloraReceiptModelFromBooking(booking, overrides) {
   var checkoutTime = overrides.checkoutTime != null ? overrides.checkoutTime : CHECKOUT_TIME;
   return buildAloraReceiptModel({
     id: booking.id,
+    bookingId: booking.id,
     guest: guest,
     depto: booking.depto,
     entrada: booking.entrada,
@@ -6270,11 +6446,11 @@ function buildAloraReceiptHTML(model) {
       '<img src="' + ALORA_RECEIPT_MARK_SRC + '" alt="" class="alora-receipt-mark">' +
       '<img src="' + ALORA_RECEIPT_WORDMARK_SRC + '" alt="ALORA" class="alora-receipt-wordmark">' +
       '<p class="alora-receipt-sub">BVG Residencial · Ixtapa Zihuatanejo</p>' +
-      '<h2 class="alora-receipt-title">RECIBO DE PAGO / PAYMENT RECEIPT</h2>' +
+      '<h2 class="alora-receipt-title">' + esc(model.docTitle || 'RECIBO DE PAGO / PAYMENT RECEIPT') + '</h2>' +
       tagHtml +
       '<div class="alora-receipt-rows">' + rowsHtml + '</div>' +
-      '<hr class="alora-receipt-rule">' +
-      '<div class="alora-receipt-total"><span>TOTAL PAGADO / PAID</span><span>' + esc(model.totalValue) + '</span></div>' +
+      (model.hideTotal ? '' : ('<hr class="alora-receipt-rule">' +
+      '<div class="alora-receipt-total"><span>' + esc(model.totalLabel || 'TOTAL PAGADO / PAID') + '</span><span>' + esc(model.totalValue) + '</span></div>')) +
       summaryHtml +
       '<p class="alora-receipt-thanks">¡Gracias por su pago! / Thank you!</p>' +
       '<hr class="alora-receipt-sign-line">' +
@@ -6351,7 +6527,10 @@ function drawAloraReceiptCanvas(model) {
     y += 70;
     ctx.fillStyle = '#E86F5A';
     ctx.font = fontFace(28, true);
-    ctx.fillText('RECIBO DE PAGO / PAYMENT RECEIPT', W / 2, y);
+    var docTitle = model.docTitle || 'RECIBO DE PAGO / PAYMENT RECEIPT';
+    ctx.font = fontFace(28, true);
+    if (ctx.measureText(docTitle).width > W - 140) ctx.font = fontFace(20, true);
+    ctx.fillText(docTitle, W / 2, y);
     y += 48;
     if (model.typeTag) {
       ctx.font = fontFace(16, true);
@@ -6417,34 +6596,38 @@ function drawAloraReceiptCanvas(model) {
     ctx.font = fontFace(24, true);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('TOTAL PAGADO / PAID', 110, y);
-    ctx.fillStyle = '#E86F5A';
-    ctx.font = fontFace(32, true);
-    ctx.textAlign = 'right';
-    ctx.fillText(model.totalValue, W - 110, y - 4);
-    y += 65;
-
-    if (model.showBalance) {
-      ctx.fillStyle = '#777';
-      ctx.font = fontFace(22, false);
-      ctx.textAlign = 'left';
-      ctx.fillText('Pagado a la fecha / Paid to date', 110, y);
-      ctx.fillStyle = '#2E2E2E';
-      ctx.font = fontFace(24, true);
-      ctx.textAlign = 'right';
-      ctx.fillText(model.paidSoFarValue, W - 110, y);
-      y += 52;
-      ctx.fillStyle = '#777';
-      ctx.font = fontFace(22, false);
-      ctx.textAlign = 'left';
-      ctx.fillText('Saldo pendiente / Balance due', 110, y);
-      ctx.fillStyle = '#2E2E2E';
-      ctx.font = fontFace(24, true);
-      ctx.textAlign = 'right';
-      ctx.fillText(model.balanceValue, W - 110, y);
-      y += 90;
+    if (model.hideTotal) {
+      y += 24;
     } else {
-      y += 40;
+      ctx.fillText(model.totalLabel || 'TOTAL PAGADO / PAID', 110, y);
+      ctx.fillStyle = '#E86F5A';
+      ctx.font = fontFace(32, true);
+      ctx.textAlign = 'right';
+      ctx.fillText(model.totalValue, W - 110, y - 4);
+      y += 65;
+
+      if (model.showBalance) {
+        ctx.fillStyle = '#777';
+        ctx.font = fontFace(22, false);
+        ctx.textAlign = 'left';
+        ctx.fillText('Pagado a la fecha / Paid to date', 110, y);
+        ctx.fillStyle = '#2E2E2E';
+        ctx.font = fontFace(24, true);
+        ctx.textAlign = 'right';
+        ctx.fillText(model.paidSoFarValue, W - 110, y);
+        y += 52;
+        ctx.fillStyle = '#777';
+        ctx.font = fontFace(22, false);
+        ctx.textAlign = 'left';
+        ctx.fillText('Saldo pendiente / Balance due', 110, y);
+        ctx.fillStyle = '#2E2E2E';
+        ctx.font = fontFace(24, true);
+        ctx.textAlign = 'right';
+        ctx.fillText(model.balanceValue, W - 110, y);
+        y += 90;
+      } else {
+        y += 40;
+      }
     }
 
     ctx.fillStyle = '#2E2E2E';
@@ -6546,6 +6729,449 @@ function printAloraReceipt(model) {
   setTimeout(cleanup, 2000);
 }
 
+function syncWorkerMovementHint() {
+  var t = selectedWorkerPaymentType();
+  var hint = document.getElementById('wrMoveHint');
+  if (hint) hint.style.display = (t === 'cancelacion' || t === 'devolucion') ? '' : 'none';
+  var lab = document.querySelector('label[for="wrPaid"]');
+  if (!lab) return;
+  if (t === 'devolucion') lab.textContent = 'Cantidad a devolver (MXN) *';
+  else if (t === 'cancelacion') lab.textContent = 'Cantidad, si la hay (opcional)';
+  else lab.textContent = 'Cantidad de este pago (MXN) *';
+}
+function receiptTypeLabel(t) {
+  if (t === 'abono') return 'Abono';
+  if (t === 'liquidacion') return 'Liquidación';
+  if (t === 'cancelacion') return 'Cancelación';
+  if (t === 'devolucion') return 'Devolución';
+  if (t === 'historico') return 'Historial';
+  return 'Anticipo';
+}
+function receiptActor() {
+  var u = null;
+  try { u = asCurrentUser(); } catch (e) {}
+  if (!u) return { short: 'Koke', pin: '0314', role: 'admin' };
+  return {
+    short: u.short || u.name || (u.role === 'worker' ? 'Valeria' : 'Koke'),
+    pin: String(u.pin || ''),
+    role: u.role === 'worker' ? 'worker' : 'admin'
+  };
+}
+function receiptCanApplyToBooking(type) {
+  if (type === 'cancelacion' || type === 'devolucion') return !!asCanSeeRevenue();
+  return true;
+}
+function receiptGuestKey(name) {
+  return stripEncargadoSuffix(name).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+function receiptSameUnit(a, b) {
+  var ua = workerReceiptUnit(a);
+  var ub = workerReceiptUnit(b);
+  if (ua && ub) return ua === ub;
+  return String(a || '') === String(b || '');
+}
+function findReceiptBooking(draft, bookings) {
+  if (!bookings) bookings = getBookings();
+  var i;
+  if (draft && draft.bookingId) {
+    for (i = 0; i < bookings.length; i++) {
+      if (String(bookings[i].id) === String(draft.bookingId)) return bookings[i];
+    }
+  }
+  if (!draft || !draft.guest || !draft.entrada || !draft.salida) return null;
+  var guest = receiptGuestKey(draft.guest);
+  for (i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    if (!b || b.status === 'CANCELADA') continue;
+    if (!receiptSameUnit(b.depto, draft.depto)) continue;
+    if (b.entrada !== draft.entrada || b.salida !== draft.salida) continue;
+    if (receiptGuestKey(b.rent) !== guest) continue;
+    return b;
+  }
+  return null;
+}
+function receiptDateConflicts(draft, ignoreId) {
+  var hits = [];
+  if (!draft) return hits;
+  var bookings = getBookings();
+  for (var i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    if (!b || b.status === 'CANCELADA') continue;
+    if (ignoreId && String(b.id) === String(ignoreId)) continue;
+    if (!receiptSameUnit(b.depto, draft.depto)) continue;
+    if (!draft.entrada || !draft.salida || !b.entrada || !b.salida) continue;
+    if (draft.entrada < b.salida && draft.salida > b.entrada) hits.push(b);
+  }
+  return hits;
+}
+function paymentAlreadyOnBooking(booking, folio, type) {
+  var pays = booking && booking.payments;
+  if (!pays) return false;
+  for (var i = 0; i < pays.length; i++) {
+    if (pays[i] && !pays[i].legacy && pays[i].folio === folio && pays[i].type === type) return true;
+  }
+  return false;
+}
+function pushBookingPayment(booking, payment) {
+  if (!Array.isArray(booking.payments)) booking.payments = [];
+  if (paymentAlreadyOnBooking(booking, payment.folio, payment.type)) return false;
+  var fresh = booking.payments.length === 0;
+  var estimated = fresh ? legacyCashAmount(booking) : 0;
+  if (fresh && payment.amount > 0 && estimated > payment.amount + 0.5) {
+    booking.payments.push({
+      id: 'hist-' + booking.id,
+      type: 'historico',
+      amount: Math.round((estimated - payment.amount) * 100) / 100,
+      date: booking.entrada || payment.date,
+      folio: 'HIST-' + booking.id,
+      by: 'Historial',
+      legacy: true,
+      note: 'Ya estaba contado en el anticipo. No se suma otra vez con este pago.'
+    });
+  }
+  if (fresh && payment.amount < 0 && estimated > 0) {
+    booking.payments.push({
+      id: 'hist-' + booking.id,
+      type: 'historico',
+      amount: estimated,
+      date: booking.entrada || payment.date,
+      folio: 'HIST-' + booking.id,
+      by: 'Historial',
+      legacy: true,
+      note: 'Cobrado anterior, antes de esta devolución.'
+    });
+  }
+  booking.payments.push(payment);
+  if (payment.type === 'liquidacion') {
+    booking.paidInFull = true;
+    booking.anticipo = '3/3';
+  }
+  if (payment.type === 'devolucion') booking.paidInFull = false;
+  return true;
+}
+function applyReceiptDraft(draft, actor) {
+  var bookings = getBookings();
+  var type = draft.paymentType;
+  var match = findReceiptBooking(draft, bookings);
+  var amount = Math.abs(Number(draft.amount) || 0);
+  var payment = {
+    id: 'p-' + Date.now(),
+    type: type,
+    amount: type === 'devolucion' ? -amount : amount,
+    date: draft.fecha || receiptMexicoCityYmd(),
+    folio: draft.folio,
+    by: actor.short,
+    byPin: actor.pin,
+    note: draft.note || ''
+  };
+  if (type === 'cancelacion') {
+    if (!match) return { applied: false, kind: 'no-booking' };
+    match.status = 'CANCELADA';
+    if (draft.checkinTime) match.checkinTime = draft.checkinTime;
+    if (draft.checkoutTime) match.checkoutTime = draft.checkoutTime;
+    saveBookings(bookings);
+    return { applied: true, bookingId: match.id, kind: 'cancel' };
+  }
+  if (match) {
+    pushBookingPayment(match, payment);
+    if (draft.checkinTime) match.checkinTime = draft.checkinTime;
+    if (draft.checkoutTime) match.checkoutTime = draft.checkoutTime;
+    saveBookings(bookings);
+    return { applied: true, bookingId: match.id, kind: 'payment' };
+  }
+  var created = {
+    id: nextId(bookings),
+    rent: stripEncargadoSuffix(draft.guest),
+    depto: workerReceiptUnit(draft.depto) || draft.depto,
+    entrada: draft.entrada,
+    salida: draft.salida,
+    checkinTime: draft.checkinTime || '',
+    checkoutTime: draft.checkoutTime || '',
+    fuente: 'WhatsApp',
+    encargado: actor.short,
+    total: 0,
+    anticipo: type === 'liquidacion' ? '3/3' : '',
+    status: 'POR LLEGAR',
+    lim: 0,
+    book: '',
+    notas: draft.note || '',
+    specialPrice: false,
+    specialRate: 0,
+    payments: [],
+    paidInFull: type === 'liquidacion'
+  };
+  created.payments.push(payment);
+  bookings.push(created);
+  saveBookings(bookings);
+  return { applied: true, bookingId: created.id, kind: 'created' };
+}
+function receiptSaveCopy(draft, hasMatch, conflicts, canApply) {
+  var actor = receiptActor();
+  var who = actor.role === 'worker' ? 'Tú quedas como encargada.' : 'Tú quedas como encargado.';
+  var money = fmtMoney(Math.abs(draft.amount || 0));
+  var when = fmtDateShort(draft.entrada) + ' → ' + fmtDateShort(draft.salida);
+  var unit = workerReceiptUnit(draft.depto) || draft.depto || '';
+  var warn = '';
+  if (conflicts && conflicts.length && draft.paymentType !== 'cancelacion') {
+    var bits = conflicts.slice(0, 3).map(function(b) {
+      return stripEncargadoSuffix(b.rent) + ' (' + fmtDateShort(b.entrada) + ' → ' + fmtDateShort(b.salida) + ')';
+    });
+    warn = 'Ojo: estas fechas se cruzan con ' + bits.join(', ') + ' en el mismo depto. Si continúas, quedan dos reservas.';
+  }
+  var type = draft.paymentType;
+  if ((type === 'cancelacion' || type === 'devolucion') && !canApply) {
+    return {
+      title: type === 'cancelacion' ? '¿Enviar la cancelación a Koke?' : '¿Enviar la devolución a Koke?',
+      text: 'El comprobante ya quedó guardado. La reserva no cambia hasta que Koke lo apruebe en el dashboard.',
+      warn: warn,
+      yes: 'Enviar solicitud',
+      no: 'Solo el comprobante'
+    };
+  }
+  if (type === 'cancelacion') {
+    return {
+      title: '¿Cancelar esta reservación?',
+      text: hasMatch
+        ? 'Se marca como cancelada y deja libres esas noches. La reserva no se borra, y lo que faltaba por cobrar deja de contarse como ingreso esperado.'
+        : 'No hay una reserva que coincida. El comprobante se guarda, pero no hay nada que cancelar.',
+      warn: '',
+      yes: hasMatch ? 'Sí, cancelar' : 'Entendido',
+      no: 'Ahora no'
+    };
+  }
+  if (type === 'devolucion') {
+    return {
+      title: hasMatch ? '¿Registrar esta devolución en la reservación?' : '¿Agregar esta reservación al dashboard?',
+      text: hasMatch
+        ? 'Se anota un reembolso de ' + money + ' y baja lo cobrado en la fecha del comprobante.'
+        : 'No hay reserva con ese huésped, depto y fechas. Se crea una con esta devolución. ' + who,
+      warn: warn,
+      yes: hasMatch ? 'Sí, registrar' : 'Sí, agregar',
+      no: 'Ahora no'
+    };
+  }
+  if (hasMatch) {
+    return {
+      title: '¿Registrar este pago en la reservación?',
+      text: receiptTypeLabel(type) + ' de ' + money + ' para ' + (draft.guest || 'el huésped') + ' · ' + unit + ' · ' + when + '.',
+      warn: '',
+      yes: 'Sí, registrar',
+      no: 'Ahora no'
+    };
+  }
+  return {
+    title: '¿Agregar esta reservación al dashboard?',
+    text: 'Se crea la reserva de ' + (draft.guest || 'el huésped') + ' en ' + unit + ', ' + when + ', con este primer pago de ' + money + '. ' + who,
+    warn: warn,
+    yes: 'Sí, agregar',
+    no: 'Ahora no'
+  };
+}
+var _receiptSaveDraft = null;
+var _receiptSaveHistoryId = null;
+function ensureReceiptHistory(model) {
+  if (!model || !model.draft) return null;
+  if (model.historyId) return model.historyId;
+  var actor = receiptActor();
+  var draft = model.draft;
+  var numero = getNextReceiptNumber();
+  var id = Date.now();
+  var row = {
+    id: id,
+    numero: numero,
+    folio: draft.folio,
+    fecha: draft.fecha,
+    bookingId: draft.bookingId || '',
+    cliente: draft.guest,
+    depto: draft.depto,
+    fechaEntrada: draft.entrada,
+    fechaSalida: draft.salida,
+    paymentType: draft.paymentType,
+    cantidad: draft.paymentType === 'devolucion' ? -Math.abs(draft.amount || 0) : Math.abs(draft.amount || 0),
+    note: draft.note || '',
+    concepto: receiptTypeLabel(draft.paymentType) + (draft.note ? ' · ' + draft.note : ''),
+    formaPago: draft.paymentType === 'devolucion' ? 'Devolución' : 'Recibo',
+    createdBy: actor.short,
+    createdByPin: actor.pin,
+    createdByRole: actor.role,
+    totalReserva: 0,
+    applied: '',
+    request: null
+  };
+  var list = getReceipts();
+  list.push(row);
+  saveReceipts(list);
+  setReceiptCounter(numero);
+  model.historyId = id;
+  return id;
+}
+function markReceiptHistory(id, patch) {
+  if (!id) return;
+  var list = getReceipts();
+  var row = null;
+  for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) row = list[i];
+  if (!row) return;
+  Object.keys(patch || {}).forEach(function(k) { row[k] = patch[k]; });
+  saveReceipts(list);
+}
+function refreshMoneySurfaces() {
+  try { renderDashboard(); } catch (e) {}
+  try {
+    if (document.getElementById('sec-reportes') && document.getElementById('sec-reportes').classList.contains('active')) renderReports();
+  } catch (e) {}
+  try {
+    if (document.getElementById('sec-tracking') && document.getElementById('sec-tracking').classList.contains('active')) renderTracking();
+  } catch (e) {}
+  renderReceiptSurfaces();
+}
+function offerReceiptDashboardSave(model) {
+  if (!model || !model.draft) return;
+  var key = [model.draft.folio, model.draft.paymentType, model.draft.amount, model.draft.guest, model.draft.entrada].join('|');
+  if (model._offered === key) return;
+  model._offered = key;
+  ensureReceiptHistory(model);
+  _receiptSaveDraft = model.draft;
+  _receiptSaveHistoryId = model.historyId;
+  var match = findReceiptBooking(model.draft);
+  var conflicts = receiptDateConflicts(model.draft, match ? match.id : '');
+  var copy = receiptSaveCopy(model.draft, !!match, conflicts, receiptCanApplyToBooking(model.draft.paymentType));
+  document.getElementById('receiptSaveTitle').textContent = copy.title;
+  document.getElementById('receiptSaveText').textContent = copy.text;
+  var warn = document.getElementById('receiptSaveWarn');
+  if (copy.warn) { warn.style.display = ''; warn.textContent = copy.warn; }
+  else { warn.style.display = 'none'; warn.textContent = ''; }
+  document.getElementById('receiptSaveNo').textContent = copy.no;
+  document.getElementById('receiptSaveYes').textContent = copy.yes;
+  openModal('receiptSaveModal');
+  renderReceiptSurfaces();
+}
+function answerReceiptSave(yes) {
+  var draft = _receiptSaveDraft;
+  var hid = _receiptSaveHistoryId;
+  closeModal('receiptSaveModal');
+  if (!draft) return;
+  if (!yes) {
+    markReceiptHistory(hid, { applied: 'no' });
+    renderReceiptSurfaces();
+    showToast('El comprobante quedó en el historial', 'info');
+    return;
+  }
+  if (!receiptCanApplyToBooking(draft.paymentType)) {
+    markReceiptHistory(hid, {
+      applied: 'pending',
+      request: { kind: draft.paymentType, status: 'pending', bookingId: draft.bookingId || '' }
+    });
+    renderReceiptSurfaces();
+    showToast('Solicitud enviada a Koke', 'success');
+    return;
+  }
+  if (draft.paymentType === 'cancelacion' && !findReceiptBooking(draft)) {
+    markReceiptHistory(hid, { applied: 'no-booking' });
+    renderReceiptSurfaces();
+    showToast('No hay reserva para cancelar', 'info');
+    return;
+  }
+  var result = applyReceiptDraft(draft, receiptActor());
+  markReceiptHistory(hid, { applied: result.kind || 'yes', bookingId: result.bookingId || draft.bookingId || '' });
+  refreshMoneySurfaces();
+  showToast(result.kind === 'cancel' ? 'Reservación cancelada' : 'Listo, quedó en el dashboard', 'success');
+}
+function approveReceiptRequest(id, accept) {
+  if (!asCanSeeRevenue()) return;
+  var list = getReceipts();
+  var row = null;
+  for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) row = list[i];
+  if (!row || !row.request || row.request.status !== 'pending') return;
+  if (!accept) {
+    row.request.status = 'rejected';
+    row.applied = 'rejected';
+    saveReceipts(list);
+    renderReceiptSurfaces();
+    showToast('Solicitud rechazada', 'info');
+    return;
+  }
+  var draft = {
+    bookingId: row.bookingId || (row.request && row.request.bookingId) || '',
+    guest: row.cliente,
+    depto: row.depto,
+    entrada: row.fechaEntrada,
+    salida: row.fechaSalida,
+    paymentType: row.paymentType,
+    amount: Math.abs(Number(row.cantidad) || 0),
+    note: row.note || '',
+    folio: row.folio,
+    fecha: row.fecha,
+    checkinTime: '',
+    checkoutTime: ''
+  };
+  var result = applyReceiptDraft(draft, { short: 'Koke', pin: '0314', role: 'admin' });
+  row.request.status = result.applied ? 'approved' : 'rejected';
+  row.applied = result.applied ? result.kind : 'rejected';
+  if (result.bookingId) row.bookingId = result.bookingId;
+  saveReceipts(list);
+  refreshMoneySurfaces();
+  showToast(result.applied ? 'Solicitud aplicada' : 'No se pudo aplicar', result.applied ? 'success' : 'error');
+}
+function receiptBelongsToActor(row, actor) {
+  if (!row || !actor) return false;
+  if (row.createdByPin && actor.pin && String(row.createdByPin) === String(actor.pin)) return true;
+  return !row.createdByPin && row.createdBy && actor.short && String(row.createdBy) === String(actor.short);
+}
+function renderWorkerReceiptHistory() {
+  var box = document.getElementById('workerReceiptHistoryList');
+  if (!box) return;
+  var actor = receiptActor();
+  var mine = getReceipts().filter(function(r) { return receiptBelongsToActor(r, actor); });
+  mine.sort(function(a, b) { return (b.numero || 0) - (a.numero || 0); });
+  if (!mine.length) {
+    box.innerHTML = '<div class="as-empty">Todavía no haces recibos.</div>';
+    return;
+  }
+  box.innerHTML = mine.map(function(r) {
+    var status = '';
+    if (r.request && r.request.status === 'pending') status = 'Esperando a Koke';
+    else if (r.request && r.request.status === 'approved') status = 'Koke la aprobó';
+    else if (r.request && r.request.status === 'rejected') status = 'Koke no la aprobó';
+    else if (r.applied === 'no') status = 'Solo comprobante';
+    else if (r.applied) status = 'Registrado';
+    return '<article class="worker-stay-card">' +
+      '<div class="worker-stay-name">' + esc(receiptTypeLabel(r.paymentType)) + ' · ' + esc(r.cliente || '') + '</div>' +
+      '<div class="worker-stay-meta">' + esc(r.folio || '') + ' · ' + esc(fmtDate(r.fecha)) + ' · ' + esc(workerReceiptUnit(r.depto) || r.depto || '') + '</div>' +
+      '<div class="worker-stay-meta">' + fmtMoney(Math.abs(Number(r.cantidad) || 0)) + (r.note ? ' · ' + esc(r.note) : '') + '</div>' +
+      (status ? '<div class="worker-stay-meta">' + esc(status) + '</div>' : '') +
+    '</article>';
+  }).join('');
+}
+function renderAdminReceiptRequests() {
+  var box = document.getElementById('adminReceiptRequestList');
+  var card = document.getElementById('adminReceiptRequests');
+  if (!box || !card) return;
+  if (!asCanSeeRevenue()) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  var pending = getReceipts().filter(function(r) { return r && r.request && r.request.status === 'pending'; });
+  if (!pending.length) { box.innerHTML = '<div class="as-empty">No hay solicitudes pendientes.</div>'; }
+  else box.innerHTML = pending.map(function(r) {
+    return '<div class="as-item"><div class="as-item-top"><b>' + esc(receiptTypeLabel(r.paymentType)) + ' · ' + esc(r.cliente || '') + '</b><span class="badge badge-orange">Pendiente</span></div>' +
+      '<small>' + esc(r.folio || '') + ' · ' + esc(fmtDate(r.fecha)) + ' · ' + esc(workerReceiptUnit(r.depto) || '') + ' · ' + fmtMoney(Math.abs(Number(r.cantidad) || 0)) + ' · ' + esc(r.createdBy || '') + '</small>' +
+      '<div class="as-item-actions"><button type="button" class="btn btn-primary btn-sm" onclick="approveReceiptRequest(' + JSON.stringify(String(r.id)) + ', true)">Aprobar</button>' +
+      '<button type="button" class="btn btn-outline btn-sm" onclick="approveReceiptRequest(' + JSON.stringify(String(r.id)) + ', false)">Rechazar</button></div></div>';
+  }).join('');
+  var alert = document.getElementById('adminReceiptAlert');
+  if (alert) {
+    if (pending.length) {
+      alert.style.display = '';
+      alert.textContent = pending.length === 1
+        ? 'Valerie envió 1 solicitud de cancelación o devolución.'
+        : 'Valerie envió ' + pending.length + ' solicitudes de cancelación o devolución.';
+    } else alert.style.display = 'none';
+  }
+}
+function renderReceiptSurfaces() {
+  try { renderWorkerReceiptHistory(); } catch (e) {}
+  try { renderAdminReceiptRequests(); } catch (e) {}
+  try { renderReceiptHistory(); } catch (e) {}
+}
+
 function showAloraReceiptView(model) {
   model = receiptModelForViewer(model);
   _aloraReceiptModel = model;
@@ -6583,6 +7209,7 @@ function showAloraReceiptView(model) {
   }).catch(function() {
     if (area && _aloraReceiptModel === model) fitAloraReceiptPreview(area);
   });
+  try { offerReceiptDashboardSave(model); } catch (e) {}
 }
 function fitAloraReceiptPreview(area) {
   if (!area) return;
@@ -6785,6 +7412,7 @@ function workerReceiptModelFromForm() {
   var numero = receiptNumberForId(bookingId || 'M', fecha);
   return buildAloraReceiptModel({
     id: bookingId || 'M',
+    bookingId: bookingId,
     numero: numero,
     guest: stripEncargadoSuffix(guest),
     depto: depto,
@@ -6817,8 +7445,9 @@ function previewWorkerReceipt() {
     return;
   }
   var paid = parseReceiptAmount(document.getElementById('wrPaid').value);
-  if (!(paid > 0)) { showToast('Escribe la cantidad de este pago', 'error'); return; }
-  if (!selectedWorkerPaymentType()) { showToast('Elige el tipo de pago', 'error'); return; }
+  var move = selectedWorkerPaymentType();
+  if (!move) { showToast('Elige el tipo de pago', 'error'); return; }
+  if (move !== 'cancelacion' && !(paid > 0)) { showToast('Escribe la cantidad', 'error'); return; }
   showAloraReceiptView(workerReceiptModelFromForm());
 }
 
@@ -7033,8 +7662,10 @@ function renderReceiptHistory() {
   if (!asCanSeeRevenue()) {
     var emptyBody = document.getElementById('recibosBody');
     if (emptyBody) emptyBody.innerHTML = '';
+    try { renderWorkerReceiptHistory(); } catch (e) {}
     return;
   }
+  try { renderAdminReceiptRequests(); } catch (e) {}
   const search = (document.getElementById('rcSearch')?.value || '').toLowerCase();
   let receipts = getReceipts();
   if (search) {
@@ -7235,12 +7866,8 @@ function renderReports() {
   const completed = bookings.filter(b => b.status === 'COMPLETADA' && !b.depto.includes('Mantenimiento'));
 
   // Revenue vs Expenses monthly
-  const revMonthly = new Array(12).fill(0);
+  const revMonthly = incomeCashByMonth(bookings, yr);
   const expMonthly = new Array(12).fill(0);
-  completed.filter(b => b.entrada && b.entrada.startsWith(String(yr))).forEach(b => {
-    const m = parseInt(b.entrada.split('-')[1]) - 1;
-    revMonthly[m] += b.total || 0;
-  });
   expenses.filter(e => e.date && e.date.startsWith(String(yr))).forEach(e => {
     const m = parseInt(e.date.split('-')[1]) - 1;
     expMonthly[m] += e.cantidad || 0;
@@ -7293,16 +7920,8 @@ function renderReports() {
   });
 
   // Year over Year comparison
-  const rev2025 = new Array(12).fill(0);
-  const rev2026 = new Array(12).fill(0);
-  completed.filter(b => b.entrada && b.entrada.startsWith('2025')).forEach(b => {
-    const m = parseInt(b.entrada.split('-')[1]) - 1;
-    rev2025[m] += b.total || 0;
-  });
-  completed.filter(b => b.entrada && b.entrada.startsWith('2026')).forEach(b => {
-    const m = parseInt(b.entrada.split('-')[1]) - 1;
-    rev2026[m] += b.total || 0;
-  });
+  const rev2025 = incomeCashByMonth(bookings, 2025);
+  const rev2026 = incomeCashByMonth(bookings, 2026);
   destroyChart('chartYoY');
   if (asCanSeeRevenue()) chartInstances['chartYoY'] = new Chart(document.getElementById('chartYoY'), {
     type: 'line',
