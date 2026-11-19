@@ -471,4 +471,169 @@ var histFn = html.match(/function renderReceiptHistory\(\) \{[\s\S]*?\nfunction 
 if (!histFn || histFn[0].indexOf('if (!asCanSeeRevenue())') === -1) throw new Error('colaboradora must not render receipt history');
 if (html.indexOf("showToast('El historial de recibos es solo para Koke (0314)'") === -1) throw new Error('delete/redownload must stay admin-only');
 
+
+if (html.indexOf('var CHECKIN_TIME = \'\';') === -1 || html.indexOf('var CHECKOUT_TIME = \'\';') === -1) {
+  throw new Error('CHECKIN_TIME and CHECKOUT_TIME must default to empty');
+}
+if (html.indexOf('function openGuestReceiptModal') === -1) throw new Error('admin guest receipt modal missing');
+if (html.indexOf('function drawAloraReceiptCanvas') === -1) throw new Error('canvas receipt renderer missing');
+if (html.indexOf('function stripEncargadoSuffix') === -1) throw new Error('guest name suffix strip missing');
+if (html.indexOf('function printAloraReceipt') === -1) throw new Error('window.print receipt view missing');
+if (html.indexOf('ALORA_RECEIPT_MARK_SRC = \'assets/alora-login-mark.png\'') === -1) {
+  throw new Error('receipt must use the locked login mark');
+}
+if (html.indexOf("openGuestReceiptModal(' + b.id + ')") === -1) throw new Error('tracking Recibo button must open the guest receipt modal');
+if (html.indexOf("goToReceiptFromBooking(' + b.id + ')") !== -1) throw new Error('tracking Recibo button should no longer jump to the old form only');
+if (html.split("openGuestReceiptModal(' + b.id + ')").length < 3) throw new Error('Recibo button must appear on the booking row and in the detail row');
+if (html.indexOf("(seeRev ? '<button class=\"btn btn-outline btn-sm\" onclick=\"event.stopPropagation();openGuestReceiptModal(' + b.id + ')\"") === -1) {
+  throw new Error('row Recibo button must stay behind seeRev');
+}
+if (html.indexOf('Los recibos de huésped son solo para Koke (0314)') === -1) {
+  throw new Error('guest receipt modal must refuse the colaboradora');
+}
+
+function stripEncargadoSuffix(name) {
+  var raw = String(name || '').trim();
+  if (!raw) return '';
+  var parts = raw.split(/\s+\/\s+/);
+  if (parts.length < 2) return raw;
+  var aliases = {
+    COQUE: 1, KOKE: 1, VALERY: 1, VALERIE: 1, VALERIA: 1,
+    MIRIS: 1, DAVID: 1, BALTA: 1, VANE: 1, ULISES: 1, NANI: 1,
+    MANTENIMIENTO: 1, 'SR. MARIO': 1, 'SR MARIO': 1
+  };
+  while (parts.length > 1) {
+    var last = parts[parts.length - 1].trim().toUpperCase();
+    if (aliases[last]) parts.pop();
+    else break;
+  }
+  return parts.join(' / ');
+}
+if (stripEncargadoSuffix('ERIC ZIRNSAK / COQUE') !== 'ERIC ZIRNSAK') throw new Error('strip COQUE suffix');
+if (stripEncargadoSuffix('ESMERALDA / VALERIA / COQUE') !== 'ESMERALDA') throw new Error('strip stacked encargado suffixes');
+if (stripEncargadoSuffix('Miguel Hernández / BALTA') !== 'Miguel Hernández') throw new Error('strip BALTA suffix');
+if (stripEncargadoSuffix('Ada López') !== 'Ada López') throw new Error('name without suffix stays');
+
+function receiptNumberForId(id, isoDate) {
+  var s = String(isoDate || '');
+  var p = s.split('-');
+  var mmdd = (p.length >= 3) ? (p[1] + p[2]) : '0000';
+  return 'BVG-' + id + '-' + mmdd;
+}
+if (receiptNumberForId(156, '2026-11-17') !== 'BVG-156-1117') throw new Error('folio BVG-id-MMDD');
+
+function fmtReceiptDate(iso) {
+  var months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var p = String(iso).split('-');
+  return parseInt(p[2], 10) + ' ' + months[parseInt(p[1], 10) - 1] + ' ' + p[0];
+}
+if (fmtReceiptDate('2026-11-26') !== '26 nov 2026') throw new Error('receipt date format');
+if (fmtReceiptDate('2026-11-17') !== '17 nov 2026') throw new Error('receipt issued date format');
+
+
+if (html.indexOf('function suggestReceiptPaymentType') === -1) throw new Error('payment type helper missing');
+if (html.indexOf('name="grPaymentType"') === -1) throw new Error('pre-render modal must offer Anticipo, Abono, Liquidación');
+if (html.indexOf('Tipo de pago / Payment type') === -1) throw new Error('receipt must show payment type row');
+if (html.indexOf('Total estancia / Stay total') === -1) throw new Error('receipt must show stay total');
+if (html.indexOf('Pagado a la fecha / Paid to date') === -1) throw new Error('receipt must show paid to date');
+if (html.indexOf('alora-receipt-type-tag') === -1) throw new Error('coral payment-type tag missing');
+
+function suggestReceiptPaymentType(thisPayment, stayTotal, recordedAnticipo) {
+  var pay = Number(thisPayment) || 0;
+  var total = Number(stayTotal) || 0;
+  var recorded = Number(recordedAnticipo) || 0;
+  var alreadyIncluded;
+  if (total > 0) alreadyIncluded = (recorded + pay > total) && recorded >= pay;
+  else alreadyIncluded = recorded >= pay && pay > 0;
+  var paidSoFar = alreadyIncluded ? Math.max(recorded, pay) : recorded + pay;
+  var previousPaid = Math.max(0, paidSoFar - pay);
+  var balance = total > 0 ? Math.max(0, total - paidSoFar) : 0;
+  var type;
+  if (total > 0 && balance <= 0) type = 'liquidacion';
+  else if (previousPaid <= 0) type = 'anticipo';
+  else type = 'abono';
+  return { type: type, paidSoFar: paidSoFar, previousPaid: previousPaid, balance: balance };
+}
+var full = suggestReceiptPaymentType(19200, 19200, 19200);
+if (full.type !== 'liquidacion' || full.balance !== 0 || full.paidSoFar !== 19200) throw new Error('full payment is liquidacion');
+var depNew = suggestReceiptPaymentType(12000, 19200, 0);
+if (depNew.type !== 'anticipo' || depNew.paidSoFar !== 12000 || depNew.balance !== 7200) throw new Error('first unrecorded payment is anticipo');
+var depRec = suggestReceiptPaymentType(12000, 19200, 12000);
+if (depRec.type !== 'anticipo' || depRec.previousPaid !== 0) throw new Error('first recorded deposit is anticipo');
+var lastPay = suggestReceiptPaymentType(7200, 19200, 12000);
+if (lastPay.type !== 'liquidacion' || lastPay.paidSoFar !== 19200 || lastPay.balance !== 0) throw new Error('remaining balance payment is liquidacion');
+var mid = suggestReceiptPaymentType(5000, 19200, 12000);
+if (mid.type !== 'abono' || mid.paidSoFar !== 17000 || mid.balance !== 2200) throw new Error('middle payment is abono');
+
+if (html.indexOf('function openWorkerReceiptForm') === -1) throw new Error('worker receipt entry missing');
+if (html.indexOf('>Hacer recibo<') === -1) throw new Error('Hacer recibo button missing');
+if (html.indexOf('id="workerReceiptCard"') === -1) throw new Error('worker quick form missing');
+if (html.indexOf('type="time" id="wrCheckinTime"') === -1 || html.indexOf('type="time" id="wrCheckoutTime"') === -1) {
+  throw new Error('worker form needs native time pickers');
+}
+if (html.indexOf('type="date" id="wrEntrada"') === -1 || html.indexOf('type="date" id="wrSalida"') === -1) {
+  throw new Error('worker form needs native date pickers');
+}
+if (html.indexOf('value="1204 Norte"') === -1) throw new Error('worker units must include 1204 Norte');
+if (html.indexOf('name="wrPaymentType"') === -1) throw new Error('worker payment type missing');
+if (html.indexOf('id="guestReceiptShareBtn"') === -1) throw new Error('Compartir button missing');
+if (html.indexOf('navigator.share') === -1 || html.indexOf('navigator.canShare') === -1 || html.indexOf('files: [file]') === -1) {
+  throw new Error('Compartir must use the Web Share API with a PNG file');
+}
+if (html.indexOf('function fallbackShareReceiptImage') === -1) throw new Error('share fallback missing');
+if (html.indexOf('showRevenue: false') === -1) throw new Error('worker receipt must force showRevenue false');
+var workerModelFn = html.match(/function workerReceiptModelFromForm\(\) \{[\s\S]*?\nfunction previewWorkerReceipt/);
+if (!workerModelFn) throw new Error('workerReceiptModelFromForm missing');
+if (workerModelFn[0].indexOf('total: 0') === -1 || workerModelFn[0].indexOf('rate: 0') === -1) {
+  throw new Error('worker model must not pass a stay total or nightly rate');
+}
+if (/booking\.total|booking\.anticipo|specialRate|\.lim/.test(workerModelFn[0])) {
+  throw new Error('worker model must not read booking money');
+}
+var workerFillFn = html.match(/function fillWorkerReceiptFromBooking\(\) \{[\s\S]*?\nfunction openWorkerReceiptForm/);
+if (!workerFillFn) throw new Error('fillWorkerReceiptFromBooking missing');
+if (workerFillFn[0].indexOf("paid.value = ''") === -1) throw new Error('picking a booking must clear the typed amount');
+if (/b\.total|b\.anticipo|specialRate|b\.lim|b\.notas|fmtMoney/.test(workerFillFn[0])) {
+  throw new Error('filling a worker receipt from a booking must not copy money or notes');
+}
+var workerListFn = html.match(/function populateWorkerReceiptBookings\(\) \{[\s\S]*?\nfunction selectedWorkerPaymentType/);
+if (!workerListFn || workerListFn[0].indexOf('fmtMoney') !== -1) throw new Error('worker booking list must not show money');
+var workerCards = html.match(/function renderWorkerTrackCards\(page\) \{[\s\S]*?\nfunction populateWorkerReceiptBookings/);
+if (!workerCards || /fmtMoney|b\.total|b\.anticipo/.test(workerCards[0])) {
+  throw new Error('worker tracking cards must not render money');
+}
+if (css.indexOf('.btn.worker-receipt-hero') === -1) throw new Error('thumb-sized Hacer recibo style missing');
+if (css.indexOf('font-size: 16px !important') === -1) throw new Error('inputs must stay at 16px');
+if (css.indexOf('safe-area-inset-bottom') === -1 || css.indexOf('safe-area-inset-top') === -1) {
+  throw new Error('receipt layout must respect safe areas');
+}
+if (html.indexOf('¿Registrar este pago en la reservación?') === -1) throw new Error('existing-booking confirm missing');
+if (html.indexOf('¿Agregar esta reservación al dashboard?') === -1) throw new Error('new-booking confirm missing');
+if (html.indexOf('Comprobante de devolución / Refund receipt') === -1) throw new Error('refund receipt title missing');
+if (html.indexOf('receiptCanApplyToBooking') === -1) throw new Error('cancel and refund must be gated');
+var cashStart = html.indexOf('/* INCOME_CASH_START');
+var cashEnd = html.indexOf('/* INCOME_CASH_END */');
+if (cashStart < 0 || cashEnd < cashStart) throw new Error('income cash helper missing');
+var cashApi = new Function(html.slice(cashStart, cashEnd) + '\nreturn { legacyCashAmount: legacyCashAmount, bookingCashEvents: bookingCashEvents, incomeCashTotal: incomeCashTotal, incomeCashByMonth: incomeCashByMonth, pendingExpectedIncome: pendingExpectedIncome, legacyAnticipoProgress: legacyAnticipoProgress };')();
+var full = { id: 1, depto: '1404 Norte', entrada: '2026-01-10', salida: '2026-01-15', total: 300, anticipo: '3/3', status: 'COMPLETADA' };
+if (cashApi.incomeCashTotal([full], 2026) !== 300) throw new Error('legacy 3/3 must count total once, not twice');
+if (cashApi.legacyCashAmount(full) !== 300) throw new Error('3/3 legacy cash is the stay total');
+var third = { id: 2, depto: '1401 Sur', entrada: '2026-02-01', total: 90, anticipo: '1/3', status: 'POR LLEGAR' };
+if (cashApi.legacyCashAmount(third) !== 30) throw new Error('1/3 is one third of total, not total plus a third');
+var plain = { id: 3, depto: '1404 Norte', entrada: '2026-03-01', total: 20000, anticipo: '5000', status: 'POR LLEGAR' };
+if (cashApi.legacyCashAmount(plain) !== 5000) throw new Error('plain anticipo number is the cash, not added to total');
+var ledger = { id: 4, depto: '1404 Norte', entrada: '2026-01-02', total: 20000, anticipo: '3/3', status: 'POR LLEGAR', payments: [
+  { amount: 17500, date: '2026-01-02', legacy: true },
+  { amount: 8000, date: '2026-11-18', type: 'anticipo' },
+  { amount: -500, date: '2026-11-20', type: 'devolucion' }
+] };
+if (cashApi.bookingCashSum ? false : cashApi.incomeCashTotal([ledger]) !== 25000) throw new Error('ledger replaces anticipo/total; refund subtracts');
+var months = cashApi.incomeCashByMonth([ledger], 2026);
+if (months[0] !== 17500 || months[10] !== 7500) throw new Error('cash is booked on the payment date, got ' + months.join(','));
+var cancelled = { id: 5, depto: '1404 Norte', entrada: '2026-04-01', total: 10000, anticipo: '', status: 'CANCELADA' };
+if (cashApi.pendingExpectedIncome([cancelled, plain]) !== 15000) throw new Error('cancelled unpaid balance must leave pendiente');
+var settled = { id: 6, depto: '1404 Norte', total: 200, paidInFull: true, payments: [{ amount: 50, date: '2026-05-01', type: 'liquidacion' }], status: 'COMPLETADA' };
+if (cashApi.incomeCashTotal([settled]) !== 200) throw new Error('liquidación tops cash up to the stay total without adding it twice');
+if (cashApi.pendingExpectedIncome([settled]) !== 0) throw new Error('paid in full has no pendiente');
+
 console.log('as-alora-checklist.test.js ok');
